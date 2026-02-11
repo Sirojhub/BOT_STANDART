@@ -21,7 +21,7 @@ def get_agreement_keyboard(language="en"):
     }
     
     # Validation for WEBAPP_URL
-    base_url = WEBAPP_URL if WEBAPP_URL else "https://google.com"
+    base_url = WEBAPP_URL if WEBAPP_URL else "https://sirojhub.github.io/BOT_STANDART/webapp/offer.html"
     
     # Add timestamp for cache busting
     timestamp = int(time.time())

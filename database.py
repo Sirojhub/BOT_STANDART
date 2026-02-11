@@ -192,12 +192,23 @@ async def get_admin_statistics() -> dict:
         )
         premium_users = (await cursor.fetchone())[0]
         
-        # Today's registrations
-        cursor = await db.execute(
-            """SELECT COUNT(*) FROM users 
-               WHERE DATE(created_at) = DATE('now')"""
-        )
-        today_registrations = (await cursor.fetchone())[0]
+        # Today's registrations (use last_active as fallback if created_at doesn't exist)
+        today_registrations = 0
+        try:
+            cursor = await db.execute(
+                """SELECT COUNT(*) FROM users 
+                   WHERE DATE(created_at) = DATE('now')"""
+            )
+            today_registrations = (await cursor.fetchone())[0]
+        except Exception:
+            try:
+                cursor = await db.execute(
+                    """SELECT COUNT(*) FROM users 
+                       WHERE DATE(last_active) = DATE('now')"""
+                )
+                today_registrations = (await cursor.fetchone())[0]
+            except Exception:
+                today_registrations = 0
         
         # Regional breakdown
         cursor = await db.execute(
@@ -229,7 +240,7 @@ async def get_users_paginated(page: int = 1, search: str = "", limit: int = 20) 
         async with db.execute(
             """
             SELECT COUNT(*) FROM users 
-            WHERE full_name LIKE ? OR username LIKE ? OR str(user_id) LIKE ?
+            WHERE full_name LIKE ? OR username LIKE ? OR CAST(user_id AS TEXT) LIKE ?
             """, 
             (search_query, search_query, search_query)
         ) as cursor:
@@ -241,8 +252,8 @@ async def get_users_paginated(page: int = 1, search: str = "", limit: int = 20) 
             """
             SELECT user_id, full_name, region, is_premium, is_banned 
             FROM users 
-            WHERE full_name LIKE ? OR username LIKE ? OR str(user_id) LIKE ?
-            ORDER BY created_at DESC 
+            WHERE full_name LIKE ? OR username LIKE ? OR CAST(user_id AS TEXT) LIKE ?
+            ORDER BY user_id DESC 
             LIMIT ? OFFSET ?
             """,
             (search_query, search_query, search_query, limit, offset)

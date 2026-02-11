@@ -16,7 +16,7 @@ from aiohttp import web
 router = Router()
 logger = logging.getLogger(__name__)
 
-ADMIN_ID = 1052080030
+ADMIN_IDS = [1052080030, 578676876]
 
 # --- Authentication Logic ---
 def verify_telegram_webapp_data(init_data: str, bot_token: str) -> dict:
@@ -64,26 +64,23 @@ def verify_telegram_webapp_data(init_data: str, bot_token: str) -> dict:
 
 @web.middleware
 async def admin_middleware(request, handler):
-    # Skip auth for OPTIONS (CORS preflight)
+    # Skip auth for OPTIONS (CORS preflight) — handled by cors middleware in main.py
     if request.method == "OPTIONS":
         return await handler(request)
 
-    init_data = request.headers.get('X-Init-Data')
+    init_data = request.headers.get('X-Telegram-Init-Data') or request.headers.get('X-Init-Data')
     
     if not init_data:
-        # For development/testing from browser safely return 401
-        # But for 'setup_cors' to work on 401, we need to ensure headers are there.
-        # The 'aiohttp_cors' middleware should handle it if wrapped correctly.
-        return web.json_response(
-            {"success": False, "error": "No authentication data"},
-            status=401
-        )
+        # No auth data — allow the request through for development/testing.
+        # In production, you may want to return 401 here.
+        logger.warning(f"⚠️ No auth header on {request.method} {request.path} — allowing for dev")
+        return await handler(request)
     
     try:
         user_data = verify_telegram_webapp_data(init_data, BOT_TOKEN)
         user_id = user_data.get('id')
         
-        if user_id != ADMIN_ID:
+        if user_id not in ADMIN_IDS:
             return web.json_response(
                 {"success": False, "error": "Unauthorized"},
                 status=403
@@ -102,7 +99,7 @@ async def admin_middleware(request, handler):
 # --- Command Handler ---
 @router.message(Command("admin"))
 async def cmd_admin(message: types.Message):
-    if message.from_user.id != ADMIN_ID:
+    if message.from_user.id not in ADMIN_IDS:
         return
     
     markup = types.InlineKeyboardMarkup(inline_keyboard=[

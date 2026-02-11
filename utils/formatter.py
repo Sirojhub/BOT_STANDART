@@ -4,10 +4,10 @@ def format_scan_report(stats: dict, link: str, ad_text: str = AD_PLACEHOLDER_TEX
     """
     Formats the VirusTotal scan results into a professional Uzbek template.
     """
-    harmless = stats.get('harmless', 0)
-    malicious = stats.get('malicious', 0)
-    suspicious = stats.get('suspicious', 0)
-    undetected = stats.get('undetected', 0)
+    harmless = int(stats.get('harmless', 0))
+    malicious = int(stats.get('malicious', 0))
+    suspicious = int(stats.get('suspicious', 0))
+    undetected = int(stats.get('undetected', 0))
     
     # Determine Status
     if malicious > 0:
