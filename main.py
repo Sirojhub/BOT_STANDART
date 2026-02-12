@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import os
 import sys
 from aiogram import Bot, Dispatcher
 from aiohttp import web
@@ -84,9 +85,10 @@ async def main():
     # ── Start Server ─────────────────────────────────────────────────────
     runner = web.AppRunner(app)
     await runner.setup()
-    site = web.TCPSite(runner, '0.0.0.0', 8080, reuse_address=True)
+    port = int(os.environ.get('PORT', 8080))
+    site = web.TCPSite(runner, '0.0.0.0', port, reuse_address=True)
 
-    logger.info("🚀 Starting Bot and Web Server on 0.0.0.0:8080...")
+    logger.info(f"🚀 Starting Bot and Web Server on 0.0.0.0:{port}...")
     logger.info("📋 Routes registered:")
     for route in app.router.routes():
         logger.info(f"   {route.method} {route.resource}")

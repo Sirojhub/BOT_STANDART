@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: gvard-bot
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: python main.py
+    envVars:
+      - key: BOT_TOKEN
+        sync: false
+      - key: VT_API_KEY
+        sync: false
+      - key: WEBAPP_URL
+        sync: false
+      - key: ADMIN_WEBAPP_URL
+        sync: false
