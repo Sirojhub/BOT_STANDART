@@ -184,9 +184,8 @@
             if (tabId === 'broadcast') loadAdSettings();
         }
 
-        // ===== CRITICAL: SET YOUR NGROK URL HERE =====
-        // This MUST point to your running ngrok tunnel
-        const API_BASE_URL = 'https://drably-enigmatic-malorie.ngrok-free.dev';
+        // ===== API Server URL (Render.com) =====
+        const API_BASE_URL = 'https://bot-standart.onrender.com';
 
         async function apiCall(endpoint, method = 'GET', body = null) {
             const url = API_BASE_URL + endpoint;
