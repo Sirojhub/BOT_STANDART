@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import os
+import signal
 import sys
 from aiogram import Bot, Dispatcher
 from aiohttp import web
@@ -54,6 +55,12 @@ async def cors_and_logging_middleware(request, handler):
     return response
 
 
+# ── Health Check Endpoint ─────────────────────────────────────────────────
+async def health_check(request):
+    """Render health check — returns 200 so Render knows the service is alive."""
+    return web.json_response({"status": "ok", "service": "gvard-bot"})
+
+
 async def main():
     # Initialize Bot and Dispatcher
     bot = Bot(token=BOT_TOKEN)
@@ -82,6 +89,9 @@ async def main():
     # Setup Admin Routes (from handlers/admin.py)
     admin.setup_admin_routes(app)
 
+    # Health check route (Render pings this to verify service is alive)
+    app.router.add_get('/', health_check)
+
     # ── Start Server ─────────────────────────────────────────────────────
     runner = web.AppRunner(app)
     await runner.setup()
@@ -93,14 +103,39 @@ async def main():
     for route in app.router.routes():
         logger.info(f"   {route.method} {route.resource}")
 
+    # ── Graceful SIGTERM Handling ─────────────────────────────────────────
+    # When Render sends SIGTERM, stop polling FIRST so the next instance
+    # can start without TelegramConflictError.
+    stop_event = asyncio.Event()
+
+    def handle_sigterm(*args):
+        logger.info("⚠️ SIGTERM received — stopping polling gracefully...")
+        stop_event.set()
+
+    signal.signal(signal.SIGTERM, handle_sigterm)
+    signal.signal(signal.SIGINT, handle_sigterm)
+
     try:
-        await asyncio.gather(
-            dp.start_polling(bot),
-            site.start()
-        )
+        await site.start()
+        polling_task = asyncio.create_task(dp.start_polling(bot))
+
+        # Wait until SIGTERM is received
+        await stop_event.wait()
+
+        # Stop polling gracefully
+        logger.info("🛑 Stopping bot polling...")
+        await dp.stop_polling()
+        polling_task.cancel()
+        try:
+            await polling_task
+        except asyncio.CancelledError:
+            pass
+
     except Exception as e:
         logger.error(f"Error in main loop: {e}")
     finally:
+        logger.info("🧹 Cleaning up...")
+        await bot.session.close()
         await runner.cleanup()
 
 
