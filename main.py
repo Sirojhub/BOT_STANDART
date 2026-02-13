@@ -8,7 +8,7 @@ Render.com Web Service sifatida ishlaydi:
 
 Hal qilingan muammolar:
   ✅ ConflictError — delete_webhook + drop_pending_updates
-  ✅ Async session — database.py'da AUTOCOMMIT, commit() yo'q
+  ✅ Async session — asyncpg (native async, commit() yo'q)
   ✅ User persistence — /start da get_user → create_user
 """
 

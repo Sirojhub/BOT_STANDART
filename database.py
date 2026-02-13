@@ -1,200 +1,216 @@
 """
-database.py — Sarhad Bot: Asinxron PostgreSQL operatsiyalar
-═══════════════════════════════════════════════════════════
-Qoidalar:
-  ✅ Faqat aiopg (psycopg2 async wrapper)
-  ✅ Pool orqali connection boshqaruv
-  ✅ Har bir connection AUTOCOMMIT rejimida
-  ❌ commit(), rollback(), set_session() HECH QAERDA YO'Q
+database.py — Sarhad Bot | asyncpg bilan toza asinxron PostgreSQL
+
+BARCHA MUAMMOLAR HAL QILINDI:
+  aiopg + psycopg2 wrapper → asyncpg (native async driver)
+  commit() / set_session() / isolation_level → YO'Q (kerak emas)
+  ResourceWarning → pool.close() to'liq await qilinadi
 """
 
 import logging
+import asyncpg
 from typing import Optional
-
-import aiopg
-import psycopg2.extensions  # faqat ISOLATION_LEVEL_AUTOCOMMIT konstanta uchun
 
 logger = logging.getLogger(__name__)
 
-# ── Global pool ──────────────────────────────────────────────────────────
-_pool: Optional[aiopg.Pool] = None
+_pool: Optional[asyncpg.Pool] = None
 
 
-# ── Pool yaratish va yopish ──────────────────────────────────────────────
+# ══════════════════════════════════════════════
+# INIT VA CLOSE
+# ══════════════════════════════════════════════
 
-async def init_db(dsn: str) -> aiopg.Pool:
+async def init_db(dsn: str) -> None:
     """
-    PostgreSQL connection pool yaratadi va users jadvalini hosil qiladi.
-
-    Har bir yangi connection uchun ISOLATION_LEVEL_AUTOCOMMIT o'rnatiladi.
-    Bu shuni anglatadiki:
-      - Har bir cur.execute() natijasi darhol diskka yoziladi
-      - commit() chaqirish KERAK EMAS (va chaqirsa XATO beradi)
-      - set_session() chaqirish KERAK EMAS (va chaqirsa XATO beradi)
+    asyncpg Pool yaratish + jadvallarni tayyorlash.
+    dsn = Render → PostgreSQL → Internal Database URL
+    format: postgresql://user:password@host:5432/dbname
     """
     global _pool
 
-    # Pool yaratish
-    # on_connect — har bir yangi raw psycopg2 connection uchun chaqiriladi
-    _pool = await aiopg.create_pool(dsn, minsize=1, maxsize=5)
+    if _pool is not None:
+        logger.warning("init_db: pool allaqachon mavjud.")
+        return
 
-    # Har bir connection'ga autocommit o'rnatish
-    # aiopg pool'dan acquire() qilganda internal psycopg2 connection oladi
-    # Bu connection'ning isolation_level'ini AUTOCOMMIT qilish kerak
-    # Lekin buni pool yaratgandan keyin, birinchi connection orqali qilamiz
-    async with _pool.acquire() as conn:
-        # aiopg connection'ning ichki psycopg2 connection'iga erishamiz
-        # va AUTOCOMMIT rejimini o'rnatamiz
-        conn._conn.set_isolation_level(
-            psycopg2.extensions.ISOLATION_LEVEL_AUTOCOMMIT
+    try:
+        _pool = await asyncpg.create_pool(
+            dsn=dsn,
+            min_size=1,
+            max_size=10,
+            command_timeout=30,
+            max_inactive_connection_lifetime=300,
         )
-        async with conn.cursor() as cur:
-            await cur.execute("""
-                CREATE TABLE IF NOT EXISTS users (
-                    user_id    BIGINT PRIMARY KEY,
-                    username   TEXT,
-                    full_name  TEXT,
-                    language   TEXT DEFAULT 'uz',
-                    is_active  BOOLEAN DEFAULT TRUE,
-                    created_at TIMESTAMPTZ DEFAULT NOW(),
-                    updated_at TIMESTAMPTZ DEFAULT NOW()
-                )
-            """)
-            logger.info("✅ Database initialized — users table ready.")
+        await _create_tables()
+        logger.info("✅ asyncpg pool ishga tushirildi.")
 
-    return _pool
-
-
-def _get_pool() -> aiopg.Pool:
-    """Pool'ni qaytaradi. None bo'lsa RuntimeError ko'taradi."""
-    if _pool is None or _pool.closed:
-        raise RuntimeError("Database pool is not initialized. Call init_db() first.")
-    return _pool
+    except Exception as e:
+        logger.critical(f"❌ init_db xatosi: {e}", exc_info=True)
+        raise
 
 
 async def close_db() -> None:
-    """Pool'ni yopadi — bot to'xtashida chaqiriladi."""
+    """
+    Pool'ni xavfsiz yopish.
+    pool.close() — graceful, mavjud querylar tugashini kutadi.
+    ResourceWarning chiqmasligi uchun await qilinadi.
+    """
     global _pool
-    if _pool is not None and not _pool.closed:
-        _pool.close()
-        await _pool.wait_closed()
-        logger.info("✅ Database pool closed.")
+
+    if _pool is None:
+        return
+
+    try:
+        await _pool.close()
+    except Exception as e:
+        logger.warning(f"pool.close() xatosi: {e}")
+    finally:
         _pool = None
+        logger.info("✅ asyncpg pool yopildi.")
 
 
-# ── Yordamchi: autocommit connection olish ───────────────────────────────
+# ══════════════════════════════════════════════
+# ICHKI YORDAMCHI
+# ══════════════════════════════════════════════
 
-class _AutocommitConnection:
-    """
-    Context manager: pool'dan connection oladi va AUTOCOMMIT qiladi.
-
-    Ishlatish:
-        async with _ac() as (conn, cur):
-            await cur.execute("SELECT ...")
-
-    Ichida commit/rollback CHAQIRISH MUMKIN EMAS.
-    """
-
-    def __init__(self):
-        self._conn = None
-        self._cur = None
-
-    async def __aenter__(self):
-        pool = _get_pool()
-        self._conn = await pool.acquire()
-        # AUTOCOMMIT — har bir execute darhol yoziladi
-        self._conn._conn.set_isolation_level(
-            psycopg2.extensions.ISOLATION_LEVEL_AUTOCOMMIT
+def _get_pool() -> asyncpg.Pool:
+    if _pool is None:
+        raise RuntimeError(
+            "Pool ishga tushirilmagan! Avval await init_db(dsn) chaqiring."
         )
-        self._cur = await self._conn.cursor()
-        return self._conn, self._cur
-
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
-        if self._cur is not None:
-            self._cur.close()
-        if self._conn is not None:
-            pool = _get_pool()
-            pool.release(self._conn)
-        return False  # exception'ni qayta ko'taramiz
+    return _pool
 
 
-def _ac() -> _AutocommitConnection:
-    """Qisqa nom — autocommit connection context manager."""
-    return _AutocommitConnection()
+async def _create_tables() -> None:
+    """
+    Jadvallar yaratish.
+    asyncpg DDL — autocommit. commit() kerak emas.
+    """
+    pool = _get_pool()
+
+    async with pool.acquire() as conn:
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS users (
+                user_id     BIGINT      PRIMARY KEY,
+                username    TEXT,
+                full_name   TEXT,
+                language    TEXT        NOT NULL DEFAULT 'uz',
+                is_active   BOOLEAN     NOT NULL DEFAULT TRUE,
+                created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            );
+        """)
+
+        await conn.execute("""
+            CREATE OR REPLACE FUNCTION update_updated_at()
+            RETURNS TRIGGER AS $$
+            BEGIN
+                NEW.updated_at = NOW();
+                RETURN NEW;
+            END;
+            $$ LANGUAGE plpgsql;
+        """)
+
+        await conn.execute("""
+            DROP TRIGGER IF EXISTS users_updated_at ON users;
+            CREATE TRIGGER users_updated_at
+                BEFORE UPDATE ON users
+                FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+        """)
+
+    logger.info("✅ Jadvallar va triggerlar tayyor.")
 
 
-# ── CRUD operatsiyalar ───────────────────────────────────────────────────
+# ══════════════════════════════════════════════
+# PUBLIC API
+# ══════════════════════════════════════════════
 
 async def get_user(user_id: int) -> Optional[dict]:
     """
-    Foydalanuvchini user_id bo'yicha topadi.
-    Topilmasa None qaytaradi.
+    Foydalanuvchini ID bo'yicha olish.
+    asyncpg: $1, $2 ... (psycopg2 dagi %s emas!)
+    fetchrow() → asyncpg.Record | None
     """
+    pool = _get_pool()
+
     try:
-        async with _ac() as (conn, cur):
-            await cur.execute(
-                "SELECT user_id, username, full_name, language, is_active, "
-                "created_at, updated_at FROM users WHERE user_id = %s",
-                (user_id,)
+        async with pool.acquire() as conn:
+            row = await conn.fetchrow(
+                """
+                SELECT user_id, username, full_name, language, is_active, created_at
+                FROM users WHERE user_id = $1
+                """,
+                user_id
             )
-            row = await cur.fetchone()
-            if row is None:
-                return None
-            return {
-                "user_id": row[0],
-                "username": row[1],
-                "full_name": row[2],
-                "language": row[3],
-                "is_active": row[4],
-                "created_at": row[5],
-                "updated_at": row[6],
-            }
+        return dict(row) if row else None
     except Exception as e:
         logger.error(f"DB get_user({user_id}) xatosi: {e}", exc_info=True)
         return None
 
 
 async def create_user(
-    user_id: int,
-    username: Optional[str],
+    user_id:   int,
+    username:  Optional[str],
     full_name: Optional[str],
-    language: str = "uz",
+    language:  str = "uz",
 ) -> bool:
     """
-    Yangi foydalanuvchi yaratadi.
-    Agar allaqachon mavjud bo'lsa — hech narsa qilmaydi (ON CONFLICT DO NOTHING).
-    True — muvaffaqiyatli, False — xato.
+    Yangi foydalanuvchi yaratish.
+    ON CONFLICT DO NOTHING — race condition xavfsiz.
+    Returns: True = yangi yaratildi, False = allaqachon bor
     """
+    pool = _get_pool()
+
     try:
-        async with _ac() as (conn, cur):
-            await cur.execute(
+        async with pool.acquire() as conn:
+            result = await conn.execute(
                 """
                 INSERT INTO users (user_id, username, full_name, language)
-                VALUES (%s, %s, %s, %s)
+                VALUES ($1, $2, $3, $4)
                 ON CONFLICT (user_id) DO NOTHING
                 """,
-                (user_id, username, full_name, language),
+                user_id, username, full_name, language
             )
-            logger.info(f"👤 User created/exists: {user_id} (@{username})")
-            return True
+        # asyncpg: "INSERT 0 1" = qo'shildi, "INSERT 0 0" = conflict
+        return result.endswith("1")
     except Exception as e:
         logger.error(f"DB create_user({user_id}) xatosi: {e}", exc_info=True)
         return False
 
 
 async def update_user_activity(user_id: int, is_active: bool = True) -> None:
-    """
-    Foydalanuvchining is_active va updated_at maydonlarini yangilaydi.
-    """
+    """Foydalanuvchi faolligini yangilash. Trigger updated_at ni o'zi yangilaydi."""
+    pool = _get_pool()
     try:
-        async with _ac() as (conn, cur):
-            await cur.execute(
-                """
-                UPDATE users
-                SET is_active = %s, updated_at = NOW()
-                WHERE user_id = %s
-                """,
-                (is_active, user_id),
+        async with pool.acquire() as conn:
+            await conn.execute(
+                "UPDATE users SET is_active = $1 WHERE user_id = $2",
+                is_active, user_id
             )
     except Exception as e:
         logger.error(f"DB update_user_activity({user_id}) xatosi: {e}", exc_info=True)
+
+
+async def get_all_users_count() -> int:
+    """Jami foydalanuvchilar soni (admin statistika uchun)."""
+    pool = _get_pool()
+    try:
+        async with pool.acquire() as conn:
+            row = await conn.fetchrow("SELECT COUNT(*) AS cnt FROM users")
+        return row["cnt"] if row else 0
+    except Exception as e:
+        logger.error(f"DB get_all_users_count xatosi: {e}", exc_info=True)
+        return 0
+
+
+async def get_active_users_count() -> int:
+    """Faol foydalanuvchilar soni."""
+    pool = _get_pool()
+    try:
+        async with pool.acquire() as conn:
+            row = await conn.fetchrow(
+                "SELECT COUNT(*) AS cnt FROM users WHERE is_active = TRUE"
+            )
+        return row["cnt"] if row else 0
+    except Exception as e:
+        logger.error(f"DB get_active_users_count xatosi: {e}", exc_info=True)
+        return 0
