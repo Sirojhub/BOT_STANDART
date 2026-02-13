@@ -119,8 +119,11 @@ async def main():
         await site.start()
 
         # ── Clear webhook to prevent TelegramConflictError ──
-        await bot.delete_webhook(drop_pending_updates=True)
-        logger.info("🔄 Webhook cleared, starting fresh polling...")
+        try:
+            await bot.delete_webhook(drop_pending_updates=True)
+            logger.info("🔄 Webhook cleared, starting fresh polling...")
+        except Exception as e:
+            logger.warning(f"⚠️ Could not clear webhook: {e}")
 
         polling_task = asyncio.create_task(dp.start_polling(bot))
 
@@ -137,12 +140,24 @@ async def main():
             pass
 
     except Exception as e:
-        logger.error(f"Error in main loop: {e}")
+        logger.error(f"Error in main loop: {e}", exc_info=True)
     finally:
         logger.info("🧹 Cleaning up...")
-        await close_db_pool()
-        await bot.session.close()
-        await runner.cleanup()
+        try:
+            await close_db_pool()
+            logger.info("✅ Database pool closed.")
+        except Exception as e:
+            logger.error(f"Error closing DB pool: {e}")
+        try:
+            await bot.session.close()
+            logger.info("✅ Bot session closed.")
+        except Exception as e:
+            logger.error(f"Error closing bot session: {e}")
+        try:
+            await runner.cleanup()
+            logger.info("✅ Web runner cleaned up.")
+        except Exception as e:
+            logger.error(f"Error cleaning up runner: {e}")
 
 
 if __name__ == "__main__":

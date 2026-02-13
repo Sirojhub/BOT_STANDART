@@ -58,9 +58,8 @@ class DBConnection:
         if USE_POSTGRES:
             pool = await _get_pg_pool()
             self._conn = await pool.acquire()
-            # Enable autocommit so each statement is committed immediately
-            # This prevents 'commit cannot be used in asynchronous mode' error
-            self._conn._conn.autocommit = True
+            # aiopg runs in autocommit mode by default
+            # Do NOT set conn._conn.autocommit — it triggers set_session() crash
             self._cur = await self._conn.cursor()
             return (self._conn, self._cur)
         else:
