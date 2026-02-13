@@ -25,9 +25,11 @@ DB_NAME = "bot_standart.db"  # SQLite fallback
 _pg_pool = None
 
 async def _get_pg_pool():
-    """Get or create PostgreSQL connection pool."""
+    """Get or create PostgreSQL connection pool with autocommit enabled."""
     global _pg_pool
     if _pg_pool is None or _pg_pool.closed:
+        # IMPORTANT: aiopg uses psycopg2 which requires autocommit for async
+        # Each SQL statement is auto-committed, no manual commit() needed
         _pg_pool = await aiopg.create_pool(DATABASE_URL, minsize=1, maxsize=5)
     return _pg_pool
 
@@ -56,6 +58,9 @@ class DBConnection:
         if USE_POSTGRES:
             pool = await _get_pg_pool()
             self._conn = await pool.acquire()
+            # Enable autocommit so each statement is committed immediately
+            # This prevents 'commit cannot be used in asynchronous mode' error
+            self._conn._conn.autocommit = True
             self._cur = await self._conn.cursor()
             return (self._conn, self._cur)
         else:
@@ -134,8 +139,7 @@ async def create_users_table():
                     )
                 """)
 
-                # Commit
-                await conn.commit() if hasattr(conn, 'commit') else None
+                # PostgreSQL: autocommit is ON, no manual commit needed
 
             else:
                 # SQLite schema
