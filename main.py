@@ -183,12 +183,11 @@ async def _run_forever() -> None:
 
 
 async def main() -> None:
-    """Asosiy funksiya — DB, web server va bot polling'ni boshlaydi."""
+    """Asosiy funksiya — web server, DB, va bot polling'ni boshlaydi."""
 
-    # ── 1. Startup ──
-    await on_startup()
-
-    # ── 2. aiohttp server ──
+    # ── 1. aiohttp server — PORT BIRINCHI OCHILADI ──
+    # Render port scan qiladi → agar topmasa 60 soniyada o'ldiradi
+    # Shu sababli port BIRINCHI ochilishi SHART, DB init keyin
     app = create_aiohttp_app()
     runner = web.AppRunner(app)
     await runner.setup()
@@ -196,13 +195,18 @@ async def main() -> None:
     await site.start()
     logger.info(f"🌐 Health check server running on {HOST}:{PORT}")
 
+    # ── 2. DB init + webhook tozalash ──
+    try:
+        await on_startup()
+    except Exception as e:
+        logger.critical(f"❌ Startup failed: {e}", exc_info=True)
+        await runner.cleanup()
+        return
+
     # ── 3. Bot polling + web server parallel ishlaydi ──
     try:
         logger.info("🚀 Starting Sarhad bot polling...")
         await asyncio.gather(
-            # dp.start_polling — Telegram'dan yangilanishlarni oladi
-            # drop_pending_updates=True  — eski xabarlarni o'tkazib yuboradi
-            # handle_signals=False       — Render signallarni o'zi boshqaradi
             dp.start_polling(
                 bot,
                 drop_pending_updates=True,
