@@ -82,8 +82,9 @@ async def cmd_start(message: types.Message) -> None:
             # ── Tanish foydalanuvchi ──
             logger.info(f"🔄 Returning user: {user_id} (@{username})")
             await update_user_activity(user_id, is_active=True)
+            name = existing.get("full_name") or "dostim"
             await message.answer(
-                f"👋 <b>Xush kelibsiz, {existing['full_name'] or 'do\'stim'}!</b>\n\n"
+                f"👋 <b>Xush kelibsiz, {name}!</b>\n\n"
                 f"🛡 <b>Sarhad</b> — kiberxavfsizlik yordamchingiz.\n"
                 f"Buyruqlar uchun /help bosing."
             )
