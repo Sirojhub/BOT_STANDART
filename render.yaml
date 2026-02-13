@@ -1,18 +1,13 @@
 services:
   - type: web
-    name: gvard-bot
+    name: sarhad-bot
     runtime: python
     buildCommand: pip install -r requirements.txt
     startCommand: python main.py
     envVars:
+      - key: PYTHON_VERSION
+        value: "3.11.11"
       - key: BOT_TOKEN
-        sync: false
-      - key: VT_API_KEY
-        sync: false
-      - key: WEBAPP_URL
-        sync: false
-      - key: ADMIN_WEBAPP_URL
         sync: false
       - key: DATABASE_URL
         sync: false
-
