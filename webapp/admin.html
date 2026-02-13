@@ -394,6 +394,10 @@
         }
 
         // Init
+        if (!tg.initData) {
+            document.getElementById('statusIndicators').innerText = '⚠️ Telegram auth yo\'q';
+            console.warn('⚠️ tg.initData is empty — API calls may fail with 401');
+        }
         loadStats();
 
         // Char count

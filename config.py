@@ -14,6 +14,9 @@ VT_API_KEY = os.getenv("VT_API_KEY")
 if not VT_API_KEY:
     print("WARNING: VT_API_KEY is not set in environment variables.")
 
+# Database Configuration (Render PostgreSQL)
+DATABASE_URL = os.getenv("DATABASE_URL")
+
 # WebApp Configuration
 WEBAPP_URL = os.getenv("WEBAPP_URL")
 ADMIN_WEBAPP_URL = os.getenv("ADMIN_WEBAPP_URL")

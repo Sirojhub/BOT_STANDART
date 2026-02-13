@@ -13,3 +13,6 @@ services:
         sync: false
       - key: ADMIN_WEBAPP_URL
         sync: false
+      - key: DATABASE_URL
+        sync: false
+

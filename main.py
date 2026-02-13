@@ -7,7 +7,7 @@ from aiogram import Bot, Dispatcher
 from aiohttp import web
 from config import BOT_TOKEN
 from handlers import onboarding, security, start, admin
-from database import create_users_table
+from database import create_users_table, close_db_pool
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, stream=sys.stdout)
@@ -117,6 +117,11 @@ async def main():
 
     try:
         await site.start()
+
+        # ── Clear webhook to prevent TelegramConflictError ──
+        await bot.delete_webhook(drop_pending_updates=True)
+        logger.info("🔄 Webhook cleared, starting fresh polling...")
+
         polling_task = asyncio.create_task(dp.start_polling(bot))
 
         # Wait until SIGTERM is received
@@ -135,6 +140,7 @@ async def main():
         logger.error(f"Error in main loop: {e}")
     finally:
         logger.info("🧹 Cleaning up...")
+        await close_db_pool()
         await bot.session.close()
         await runner.cleanup()
 
