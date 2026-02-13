@@ -124,6 +124,16 @@ async def create_users_table():
                     ON CONFLICT (key) DO NOTHING
                 """)
 
+                # Scan cache table for VT result caching
+                await cur.execute("""
+                    CREATE TABLE IF NOT EXISTS scan_cache (
+                        hash TEXT PRIMARY KEY,
+                        result_json TEXT,
+                        vt_link TEXT,
+                        scanned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    )
+                """)
+
                 # Commit
                 await conn.commit() if hasattr(conn, 'commit') else None
 
@@ -184,12 +194,62 @@ async def create_users_table():
                     "INSERT OR IGNORE INTO bot_settings (key, value) VALUES ('ad_text', '📢 Premium obuna: @GvardAdmin')"
                 )
 
+                # Scan cache table for VT result caching
+                await cur.execute("""
+                    CREATE TABLE IF NOT EXISTS scan_cache (
+                        hash TEXT PRIMARY KEY,
+                        result_json TEXT,
+                        vt_link TEXT,
+                        scanned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    )
+                """)
+
                 await conn.commit()
 
             logger.info("✅ Database initialized successfully.")
 
         except Exception as e:
             logger.error(f"Critical database initialization error: {e}")
+
+
+# ── Scan Cache Functions ─────────────────────────────────────────────────
+
+async def get_cached_scan(file_hash: str):
+    """Check if a VT scan result is cached for this hash."""
+    import json
+    async with DBConnection() as (conn, cur):
+        try:
+            await cur.execute(
+                q("SELECT result_json, vt_link FROM scan_cache WHERE hash = ?"),
+                (file_hash,)
+            )
+            row = await cur.fetchone()
+            if row:
+                return {"stats": json.loads(row[0]), "link": row[1], "cached": True}
+        except Exception as e:
+            logger.error(f"Cache lookup error: {e}")
+    return None
+
+async def save_scan_cache(file_hash: str, stats: dict, vt_link: str):
+    """Save a VT scan result to the cache."""
+    import json
+    async with DBConnection() as (conn, cur):
+        try:
+            if USE_POSTGRES:
+                await cur.execute(q("""
+                    INSERT INTO scan_cache (hash, result_json, vt_link, scanned_at)
+                    VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+                    ON CONFLICT (hash) DO UPDATE SET result_json = ?, vt_link = ?, scanned_at = CURRENT_TIMESTAMP
+                """), (file_hash, json.dumps(stats), vt_link, json.dumps(stats), vt_link))
+            else:
+                await cur.execute(
+                    "INSERT OR REPLACE INTO scan_cache (hash, result_json, vt_link, scanned_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP)",
+                    (file_hash, json.dumps(stats), vt_link)
+                )
+                await conn.commit()
+            logger.info(f"📦 Cached scan result for hash: {file_hash[:16]}...")
+        except Exception as e:
+            logger.error(f"Cache save error: {e}")
 
 
 # ── User Queries ─────────────────────────────────────────────────────────
