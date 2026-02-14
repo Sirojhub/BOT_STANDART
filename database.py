@@ -1,12 +1,18 @@
 import aiosqlite
 import logging
+import os
 from typing import Optional
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-DB_NAME = "bot_standart.db"
+# Ensure data directory exists
+os.makedirs("data", exist_ok=True)
+DB_NAME = "data/bot.db"
+
+def get_db_path():
+    return DB_NAME
 
 async def create_users_table():
     """
@@ -29,7 +35,11 @@ async def create_users_table():
                     language TEXT DEFAULT 'uz',
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     status TEXT, 
-                    is_offer_accepted BOOLEAN DEFAULT 0
+                    is_offer_accepted BOOLEAN DEFAULT 0,
+                    registration_complete BOOLEAN DEFAULT 0,
+                    last_active TIMESTAMP,
+                    is_premium BOOLEAN DEFAULT 0,
+                    is_banned BOOLEAN DEFAULT 0
                 )
             """)
             
@@ -73,7 +83,7 @@ async def create_users_table():
             await db.execute("INSERT OR IGNORE INTO bot_settings (key, value) VALUES ('ad_text', '📢 Premium obuna: @GvardAdmin')")
 
             await db.commit()
-            logger.info("Database initialized successfully.")
+            logger.info(f"Database initialized successfully at {DB_NAME}.")
             
         except Exception as e:
             logger.error(f"Critical database initialization error: {e}")
@@ -123,8 +133,8 @@ async def save_webapp_data(user_id: int, full_name: str, region: str, district: 
             else:
                 # Insert new user
                 await db.execute("""
-                    INSERT INTO users (user_id, full_name, region, district, mahalla, age, is_offer_accepted, status, created_at, last_active)
-                    VALUES (?, ?, ?, ?, ?, ?, 1, 'verified', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                    INSERT INTO users (user_id, full_name, region, district, mahalla, age, is_offer_accepted, status, registration_complete, created_at, last_active)
+                    VALUES (?, ?, ?, ?, ?, ?, 1, 'verified', 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
                 """, (user_id, full_name, region, district, mahalla, age))
             
             await db.commit()
@@ -158,6 +168,8 @@ async def get_user(user_id: int):
     """
     async with aiosqlite.connect(DB_NAME) as db:
         async with db.execute("SELECT * FROM users WHERE user_id = ?", (user_id,)) as cursor:
+            # Fetch column names to return a dict-like object if feasible, or just tuple
+            # For now, consistent with existing logic (tuple)
             return await cursor.fetchone()
 
 async def add_user(user_id: int, full_name: str, language: str, status: str, is_offer_accepted: bool = True, region: str = None, district: str = None, age: int = None):
@@ -168,9 +180,9 @@ async def add_user(user_id: int, full_name: str, language: str, status: str, is_
     async with aiosqlite.connect(DB_NAME) as db:
         try:
             await db.execute("""
-                INSERT OR REPLACE INTO users (user_id, full_name, language, status, is_offer_accepted, region, district, age, last_active)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
-            """, (user_id, full_name, language, status, is_offer_accepted, region, district, age))
+                INSERT OR REPLACE INTO users (user_id, full_name, language, status, is_offer_accepted, region, district, age, last_active, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, COALESCE((SELECT created_at FROM users WHERE user_id=?), CURRENT_TIMESTAMP))
+            """, (user_id, full_name, language, status, is_offer_accepted, region, district, age, user_id))
             await db.commit()
         except Exception as e:
             logger.error(f"Error in add_user for {user_id}: {e}")
@@ -192,7 +204,7 @@ async def get_admin_statistics() -> dict:
         )
         premium_users = (await cursor.fetchone())[0]
         
-        # Today's registrations (use last_active as fallback if created_at doesn't exist)
+        # Today's registrations
         today_registrations = 0
         try:
             cursor = await db.execute(
@@ -201,20 +213,13 @@ async def get_admin_statistics() -> dict:
             )
             today_registrations = (await cursor.fetchone())[0]
         except Exception:
-            try:
-                cursor = await db.execute(
-                    """SELECT COUNT(*) FROM users 
-                       WHERE DATE(last_active) = DATE('now')"""
-                )
-                today_registrations = (await cursor.fetchone())[0]
-            except Exception:
-                today_registrations = 0
+            today_registrations = 0
         
         # Regional breakdown
         cursor = await db.execute(
             """SELECT region, COUNT(*) as count 
                FROM users 
-               WHERE region IS NOT NULL
+               WHERE region IS NOT NULL AND region != ''
                GROUP BY region 
                ORDER BY count DESC"""
         )

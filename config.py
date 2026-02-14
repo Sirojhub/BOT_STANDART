@@ -18,5 +18,8 @@ if not VT_API_KEY:
 WEBAPP_URL = os.getenv("WEBAPP_URL")
 ADMIN_WEBAPP_URL = os.getenv("ADMIN_WEBAPP_URL")
 
+# Admin IDs (New)
+ADMIN_MSG_ID = os.getenv("ADMIN_ID", "1052080030") # Default fallback or empty
+
 # Advertising Configuration
 AD_PLACEHOLDER_TEXT = "Reklama joyi uchun: @admin"
