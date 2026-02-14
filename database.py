@@ -59,7 +59,8 @@ async def create_users_table():
                 "registration_complete": "BOOLEAN DEFAULT 0",
                 "last_active": "TIMESTAMP",
                 "is_premium": "BOOLEAN DEFAULT 0",
-                "is_banned": "BOOLEAN DEFAULT 0"
+                "is_banned": "BOOLEAN DEFAULT 0",
+                "daily_scans": "INTEGER DEFAULT 0"
             }
 
             for col, dtype in required_columns.items():
@@ -334,3 +335,15 @@ async def update_ad_text(new_text: str) -> bool:
             return True
         except Exception:
             return False
+
+async def reset_daily_stats():
+    """Reset daily statistics (e.g., daily_scans) for all users."""
+    async with aiosqlite.connect(DB_NAME) as db:
+        try:
+            # Assumes 'daily_scans' column exists (added in create_users_table)
+            await db.execute("UPDATE users SET daily_scans = 0")
+            await db.commit()
+            logger.info("Daily stats (daily_scans) reset to 0.")
+        except Exception as e:
+            logger.error(f"Error resetting daily stats: {e}")
+

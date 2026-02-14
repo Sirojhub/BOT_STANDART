@@ -1,4 +1,5 @@
-aiogram>=3.0.0
+aiogram
+python-dotenv
 aiosqlite
 aiohttp
-python-dotenv
+apscheduler
