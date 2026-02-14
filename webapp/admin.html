@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="uz" class="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GVARD Admin Panel</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        gray: {
+                            900: '#111827',
+                            800: '#1f2937',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #111827;
+            color: #e5e7eb;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .btn-primary {
+            @apply bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition;
+        }
+
+        .btn-danger {
+            @apply bg-red-600 hover:bg-red-700 text-white font-bold py-1 px-3 rounded transition text-sm;
+        }
+
+        .card {
+            @apply bg-gray-800 p-4 rounded-lg shadow-md mb-4;
+        }
+    </style>
+</head>
+
+<body class="p-4">
+
+    <!-- Header -->
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-xl font-bold text-blue-400">🛡 GVARD Admin</h1>
+        <div id="statusIndicators" class="text-xs text-gray-400">Loading...</div>
+    </div>
+
+    <!-- Navigation -->
+    <div class="flex space-x-2 mb-6 border-b border-gray-700 pb-2">
+        <button onclick="switchTab('stats')" id="tab-stats"
+            class="tab-btn px-4 py-2 text-blue-400 border-b-2 border-blue-400 font-medium">Statistika</button>
+        <button onclick="switchTab('users')" id="tab-users"
+            class="tab-btn px-4 py-2 text-gray-400 hover:text-blue-300">Foydalanuvchilar</button>
+        <button onclick="switchTab('broadcast')" id="tab-broadcast"
+            class="tab-btn px-4 py-2 text-gray-400 hover:text-blue-300">Xabar & Reklama</button>
+    </div>
+
+    <!-- Error/Success Message -->
+    <div id="toast" class="hidden fixed top-4 left-1/2 transform -translate-x-1/2 px-4 py-2 rounded shadow-lg z-50">
+    </div>
+
+    <!-- TAB 1: Statistics -->
+    <div id="stats" class="tab-content active">
+        <div class="grid grid-cols-2 gap-4 mb-6">
+            <div class="card text-center">
+                <div class="text-2xl font-bold text-white" id="stat-total">0</div>
+                <div class="text-xs text-gray-400">Jami Foydalanuvchi</div>
+            </div>
+            <div class="card text-center">
+                <div class="text-2xl font-bold text-yellow-400" id="stat-premium">0</div>
+                <div class="text-xs text-gray-400">Premium</div>
+            </div>
+            <div class="card text-center col-span-2">
+                <div class="text-2xl font-bold text-green-400" id="stat-today">0</div>
+                <div class="text-xs text-gray-400">Bugungi Ro'yxatdan O'tishlar</div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3 class="text-sm font-semibold mb-3 text-gray-300">Hududlar Bo'yicha</h3>
+            <canvas id="regionChart"></canvas>
+        </div>
+    </div>
+
+    <!-- TAB 2: Users -->
+    <div id="users" class="tab-content">
+        <div class="mb-4 relative">
+            <input type="text" id="userSwitch" placeholder="Qidirish (ID, Ism)..."
+                class="w-full bg-gray-900 border border-gray-700 text-white rounded p-3 pl-10 focus:outline-none focus:border-blue-500"
+                oninput="debounceSearch()">
+            <span class="absolute left-3 top-3.5 text-gray-400">🔍</span>
+        </div>
+
+        <div id="userList" class="space-y-3">
+            <!-- User items injected here -->
+            <div class="text-center text-gray-500 py-4">Yuklanmoqda...</div>
+        </div>
+
+        <div class="flex justify-between mt-4">
+            <button onclick="changePage(-1)" class="p-2 bg-gray-800 rounded disabled:opacity-50"
+                id="btn-prev">⬅️</button>
+            <span id="page-indicator" class="self-center text-sm text-gray-400">Sahifa 1</span>
+            <button onclick="changePage(1)" class="p-2 bg-gray-800 rounded disabled:opacity-50"
+                id="btn-next">➡️</button>
+        </div>
+    </div>
+
+    <!-- TAB 3: Broadcast & Ads -->
+    <div id="broadcast" class="tab-content">
+
+        <!-- Ad Text -->
+        <div class="card mb-6 border border-yellow-800">
+            <h3 class="text-sm font-bold text-yellow-500 mb-2">📢 Global Reklama Matni</h3>
+            <textarea id="adText" rows="3"
+                class="w-full bg-gray-900 text-white text-sm p-2 rounded mb-2 border border-gray-700"></textarea>
+            <button onclick="saveAdText()"
+                class="w-full bg-yellow-700 hover:bg-yellow-600 text-white text-sm py-2 rounded">Saqlash</button>
+        </div>
+
+        <!-- Broadcast -->
+        <div class="card">
+            <h3 class="text-sm font-bold text-blue-500 mb-2">📨 Xabar Yuborish (Broadcast)</h3>
+
+            <div class="mb-3">
+                <label class="text-xs text-gray-400 mb-1 block">Auditoriya:</label>
+                <select id="broadcastTarget" class="w-full bg-gray-900 text-white p-2 rounded border border-gray-700">
+                    <option value="all">Barcha Foydalanuvchilar</option>
+                    <option value="premium">Faqat Premium</option>
+                </select>
+            </div>
+
+            <textarea id="broadcastMsg" rows="5" placeholder="Xabar matnini kiriting..."
+                class="w-full bg-gray-900 text-white p-2 rounded mb-1 border border-gray-700"></textarea>
+            <div class="text-right text-xs text-gray-500 mb-3" id="charCount">0 belgilar</div>
+
+            <button onclick="sendBroadcast()" class="w-full btn-primary">Xabarni Yuborish</button>
+        </div>
+    </div>
+
+    <script>
+        const tg = window.Telegram.WebApp;
+        tg.ready();
+        tg.expand();
+
+        // State
+        let currentPage = 1;
+        let searchTimeout = null;
+        let lastStats = null;
+        let lastUsers = { users: [], total: 0, pages: 0 };
+
+        // Mock Data for Dev (Remove in Prod)
+        // const isDev = !tg.initData; 
+
+        // --- Navigation ---
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+
+            document.querySelectorAll('.tab-btn').forEach(el => {
+                el.classList.remove('text-blue-400', 'border-b-2', 'border-blue-400', 'font-medium');
+                el.classList.add('text-gray-400');
+            });
+            const btn = document.getElementById(`tab-${tabId}`);
+            btn.classList.remove('text-gray-400');
+            btn.classList.add('text-blue-400', 'border-b-2', 'border-blue-400', 'font-medium');
+
+            if (tabId === 'stats') loadStats();
+            if (tabId === 'users') loadUsers();
+            if (tabId === 'broadcast') loadAdSettings();
+        }
+
+        // ===== API Server URL (Render.com) =====
+        const API_BASE_URL = 'https://drably-enigmatic-malorie.ngrok-free.de';
+
+        async function apiCall(endpoint, method = 'GET', body = null) {
+            const url = API_BASE_URL + endpoint;
+            console.log(`📡 Calling API: ${method} ${url}`);
+
+            try {
+                const headers = {
+                    'Content-Type': 'application/json',
+                    'ngrok-skip-browser-warning': 'true',
+                };
+
+                // Add Telegram auth if available
+                if (tg.initData) {
+                    headers['X-Telegram-Init-Data'] = tg.initData;
+                }
+
+                const options = {
+                    method: method,
+                    headers: headers,
+                    mode: 'cors',
+                };
+
+                if (body) {
+                    options.body = JSON.stringify(body);
+                }
+
+                const response = await fetch(url, options);
+                console.log(`✅ Response status: ${response.status}`);
+
+                const result = await response.json();
+                console.log('📦 Response data:', result);
+
+                if (response.status === 401) {
+                    showToast('Unauthorized', 'error');
+                    return null;
+                }
+
+                return result;
+            } catch (e) {
+                console.error('❌ API Error:', e);
+                showToast('Serverga ulanib bo\'lmadi: ' + e.message, 'error');
+                return null;
+            }
+        }
+
+        // --- Tab 1: Stats ---
+        async function loadStats() {
+            document.getElementById('statusIndicators').innerText = 'Yuklanmoqda...';
+            const result = await apiCall('/api/admin/stats');
+            if (!result || !result.success) {
+                document.getElementById('statusIndicators').innerText = '❌ Xatolik';
+                return;
+            }
+
+            const data = result.data;
+            document.getElementById('stat-total').innerText = data.total_users || 0;
+            document.getElementById('stat-premium').innerText = data.premium_users || 0;
+            document.getElementById('stat-today').innerText = data.today_registrations || 0;
+            document.getElementById('statusIndicators').innerText = '✅ Ulandi';
+
+            if (data.regional_stats) {
+                renderChart(data.regional_stats);
+            }
+        }
+
+        let regionChart = null;
+        function renderChart(data) {
+            const ctx = document.getElementById('regionChart').getContext('2d');
+            const labels = Object.keys(data);
+            const values = Object.values(data);
+
+            if (regionChart) regionChart.destroy();
+
+            regionChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Foydalanuvchilar',
+                        data: values,
+                        backgroundColor: '#3b82f6',
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { ticks: { color: '#9ca3af' }, grid: { color: '#374151' } },
+                        y: { ticks: { color: '#e5e7eb' }, grid: { display: false } }
+                    }
+                }
+            });
+        }
+
+        // --- Tab 2: Users ---
+        async function loadUsers() {
+            const query = document.getElementById('userSwitch').value;
+            const result = await apiCall(`/api/admin/users?page=${currentPage}&search=${query}`);
+            if (!result || !result.success) return;
+
+            const data = result.data;
+            lastUsers = data;
+            renderUsers();
+            document.getElementById('page-indicator').innerText = `Sahifa ${currentPage} / ${data.pages || 1}`;
+            document.getElementById('btn-prev').disabled = currentPage <= 1;
+            document.getElementById('btn-next').disabled = currentPage >= (data.pages || 1);
+        }
+
+        function renderUsers() {
+            const list = document.getElementById('userList');
+            list.innerHTML = '';
+
+            lastUsers.users.forEach(user => {
+                const el = document.createElement('div');
+                el.className = `card flex justify-between items-center ${user.is_banned ? 'border-l-4 border-red-500' : ''}`;
+                el.innerHTML = `
+                    <div>
+                        <div class="font-bold text-sm ${user.is_premium ? 'text-yellow-400' : 'text-white'}">
+                            ${user.is_premium ? '🌟' : ''} ${user.full_name}
+                        </div>
+                        <div class="text-xs text-gray-400">ID: ${user.user_id} | ${user.region}</div>
+                    </div>
+                    <div class="flex space-x-2">
+                        <button onclick="togglePremium(${user.user_id})" class="p-2 rounded bg-gray-700 hover:bg-gray-600 text-xs text-yellow-500">
+                             ${user.is_premium ? 'Un-Prem' : 'Premium'}
+                        </button>
+                        <button onclick="toggleBan(${user.user_id})" class="p-2 rounded bg-gray-700 hover:bg-red-900 text-xs text-red-500">
+                             ${user.is_banned ? 'Un-Ban' : 'Ban'}
+                        </button>
+                    </div>
+                `;
+                list.appendChild(el);
+            });
+        }
+
+        function debounceSearch() {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                currentPage = 1;
+                loadUsers();
+            }, 500);
+        }
+
+        function changePage(delta) {
+            currentPage += delta;
+            loadUsers();
+        }
+
+        async function togglePremium(userId) {
+            const res = await apiCall('/api/admin/user/premium', 'POST', { user_id: userId });
+            if (res && res.success) {
+                showToast(`Status updated: ${res.new_status}`, 'success');
+                loadUsers();
+            }
+        }
+
+        async function toggleBan(userId) {
+            if (!confirm("Haqiqatan ham bu foydalanuvchini bloklamoqchimisiz?")) return;
+            const res = await apiCall('/api/admin/user/ban', 'POST', { user_id: userId });
+            if (res && res.success) {
+                showToast(`User banned: ${res.new_status}`, 'success');
+                loadUsers();
+            }
+        }
+
+        // --- Tab 3: Broadcast & Ads ---
+        async function loadAdSettings() {
+            const result = await apiCall('/api/admin/settings');
+            if (result && result.success && result.data) {
+                document.getElementById('adText').value = result.data.ad_text || '';
+            }
+        }
+
+        async function saveAdText() {
+            const text = document.getElementById('adText').value;
+            const res = await apiCall('/api/admin/settings/ad', 'POST', { text: text });
+            if (res && res.success) showToast('Reklama matni yangilandi!', 'success');
+        }
+
+        async function sendBroadcast() {
+            const text = document.getElementById('broadcastMsg').value;
+            const target = document.getElementById('broadcastTarget').value;
+
+            if (!text) return showToast('Xabar matni bo\'sh!', 'error');
+            if (!confirm(`Xabarni ${target === 'all' ? 'BARCHA' : 'PREMIUM'} foydalanuvchilarga yuborishni tasdiqlaysizmi?`)) return;
+
+            tg.MainButton.showProgress();
+            const res = await apiCall('/api/admin/broadcast', 'POST', { message: text, target: target });
+            tg.MainButton.hideProgress();
+
+            if (res && res.success) {
+                showToast(`Xabar yuborildi: ${res.count} ta foydalanuvchi`, 'success');
+                document.getElementById('broadcastMsg').value = '';
+            }
+        }
+
+        // --- Utils ---
+        function showToast(msg, type = 'success') {
+            const toast = document.getElementById('toast');
+            toast.innerText = msg;
+            toast.className = `fixed top-4 left-1/2 transform -translate-x-1/2 px-4 py-2 rounded shadow-lg z-50 ${type === 'error' ? 'bg-red-600 text-white' : 'bg-green-600 text-white'}`;
+            toast.classList.remove('hidden');
+            setTimeout(() => toast.classList.add('hidden'), 3000);
+        }
+
+        // Init
+        loadStats();
+
+        // Char count
+        document.getElementById('broadcastMsg').addEventListener('input', function () {
+            document.getElementById('charCount').innerText = `${this.value.length} belgilar`;
+        });
+
+    </script>
+</body>
+
+</html>

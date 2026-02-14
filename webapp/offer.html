@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="uz">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GVARD Verification</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --blue: #0052cc;
+            --light: #f8fafc;
+            --gray: #94a3b8;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--light);
+            color: #1e293b;
+            margin: 0;
+            padding: 15px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .card {
+            background: #fff;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            padding: 25px;
+            width: 100%;
+            max-width: 450px;
+            border: 1px solid #e2e8f0;
+        }
+
+        h2 {
+            color: var(--blue);
+            text-align: center;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+
+        .terms-box {
+            background: #f1f5f9;
+            border: 1px solid #e2e8f0;
+            height: 110px;
+            overflow-y: auto;
+            padding: 12px;
+            font-size: 0.85rem;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            color: #64748b;
+            line-height: 1.6;
+        }
+
+        .group {
+            margin-bottom: 12px;
+            text-align: left;
+        }
+
+        label {
+            display: block;
+            font-size: 0.8rem;
+            font-weight: 500;
+            margin-bottom: 4px;
+            color: var(--gray);
+        }
+
+        input,
+        select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            box-sizing: border-box;
+            font-size: 0.95rem;
+            outline: none;
+            transition: 0.2s;
+        }
+
+        input:focus,
+        select:focus {
+            border-color: var(--blue);
+        }
+
+        /* Rozilik qismi - eng muhim joyi */
+        .agree-container {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin: 20px 0;
+            padding: 10px;
+            background: #f8fafc;
+            border-radius: 8px;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        input[type="checkbox"] {
+            width: 22px;
+            height: 22px;
+            cursor: pointer;
+            margin: 0;
+        }
+
+        button {
+            width: 100%;
+            padding: 15px;
+            background: #e2e8f0;
+            color: #94a3b8;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: not-allowed;
+            transition: 0.3s;
+            pointer-events: none;
+        }
+
+        button.active {
+            background: var(--blue);
+            color: #fff;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0, 82, 204, 0.2);
+            pointer-events: auto;
+        }
+    </style>
+</head>
+
+<body onload="init()">
+    <div class="card">
+        <h2 id="h">GVARD</h2>
+        <div id="t" class="terms-box">Yuklanmoqda...</div>
+
+        <div class="group"><label id="l1">Ism</label><input type="text" id="name_in"></div>
+        <div class="group"><label id="l2">Viloyat</label><select id="reg_in" onchange="updateDist()"></select></div>
+        <div class="group"><label id="l3">Tuman</label><select id="dist_in" disabled></select></div>
+        <div class="group"><label id="l4">Mahalla</label><input type="text" id="mah_in"></div>
+        <div class="group"><label id="l5">Yosh</label><input type="number" id="age_in" min="16"></div>
+
+        <div class="agree-container" onclick="toggleCheckBox()">
+            <input type="checkbox" id="check_in" onclick="event.stopPropagation(); validate();">
+            <span id="l6" style="font-size: 0.85rem; line-height: 1.2;">Ommaviy offerta shartlariga roziman</span>
+        </div>
+
+        <button id="submit_btn" onclick="send()">TASDIQLASH</button>
+    </div>
+
+    <script>
+        const tg = window.Telegram.WebApp;
+
+        const regions = {
+            "Toshkent sh.": ["Bektemir", "Chilonzor", "Mirobod", "Mirzo Ulug'bek", "Olmazor", "Sergeli", "Shayxontohur", "Uchtepa", "Yakkasaroy", "Yashnobod", "Yunusobod", "Yangihayot"],
+            "Andijon": ["Andijon sh.", "Xonobod sh.", "Asaka", "Baliqchi", "Bo'ston", "Buloqboshi", "Izboskan", "Jalaquduq", "Marhamat", "Oltinko'l", "Paxtaobod", "Qo'rg'ontepa", "Shahrixon", "Ulug'nor", "Xo'jaobod"],
+            "Buxoro": ["Buxoro sh.", "Kogon sh.", "Buxoro t.", "Gijduvon", "Jondor", "Kogon t.", "Qorako'l", "Qorovulbozor", "Olot", "Peshku", "Romitan", "Shofirkon", "Vobkent"],
+            "Farg'ona": ["Farg'ona sh.", "Qo'qon sh.", "Marg'ilon sh.", "Quvasoy sh.", "Oltiariq", "Bag'dod", "Beshariq", "Buvayda", "Dang'ara", "Furqat", "Qo'shtepa", "Quva", "Rishton", "So'x", "Toshloq", "Uchko'prik", "Yozyovon", "O'zbekiston"],
+            "Jizzax": ["Jizzax sh.", "Arnasoy", "Baxmal", "Do'stlik", "Forish", "G'allaorol", "Sharof Rashidov", "Mirzacho'l", "Paxtakor", "Yangiobod", "Zomin", "Zafarobod", "Zarbdor"],
+            "Xorazm": ["Urganch sh.", "Xiva sh.", "Bog'ot", "Gurlan", "Qo'shko'pir", "Shovot", "Tuproqqal'a", "Urganch t.", "Xiva t.", "Xonqa", "Hazorasp", "Yangiariq", "Yangibozor"],
+            "Namangan": ["Namangan sh.", "Chortoq", "Chust", "Kosonsoy", "Mingbuloq", "Norin", "Pop", "To'raqo'rg'on", "Uychi", "Uchqo'rg'on", "Yangiqo'rg'on", "Davlatobod", "Yangi Namangan"],
+            "Navoiy": ["Navoiy sh.", "Zarafshon sh.", "G'ozg'on sh.", "Karmana", "Konimex", "Qiziltepa", "Xatirchi", "Navbahor", "Nurota", "Tomdi", "Uchkuduk"],
+            "Qashqadaryo": ["Qarshi sh.", "Shahrisabz sh.", "Dehqonobod", "Kasbi", "Kitob", "Koson", "Ko'kdala", "Mirishkor", "Muborak", "Nishon", "Qamashi", "Qarshi t.", "Shahrisabz t.", "Chiroqchi", "G'uzor", "Yakkabog'"],
+            "Samarqand": ["Samarqand sh.", "Kattaqo'rg'on sh.", "Oqdaryo", "Bulung'ur", "Ishtixon", "Jomboy", "Kattaqo'rg'on t.", "Narpay", "Nurobod", "Payariq", "Pastdarg'om", "Paxtachi", "Samarqand t.", "Toyloq", "Urgut", "Qo'shrabot"],
+            "Sirdaryo": ["Guliston sh.", "Yangiyer sh.", "Shirin sh.", "Boyovut", "Guliston t.", "Sardoba", "Mirzaobod", "Oqoltin", "Sayhunobod", "Sirdaryo t.", "Xovos"],
+            "Surxondaryo": ["Termiz sh.", "Angor", "Boysun", "Denov", "Jarqo'rg'on", "Qiziriq", "Qumqo'rg'on", "Muzrabot", "Oltinsoy", "Sariosiyo", "Sherobod", "Sho'rchi", "Termiz t.", "Uzun"],
+            "Toshkent v.": ["Nurafshon sh.", "Angren sh.", "Bekobod sh.", "Olmaliq sh.", "Chirchiq sh.", "Yangiyo'l sh.", "Ohangaron sh.", "Bekobod t.", "Bo'stonliq", "Bo'ka", "Chinoz", "Qibray", "Ohangaron t.", "Oqqo'rg'on", "Parkent", "Piskent", "Quyi Chirchiq", "O'rta Chirchiq", "Yuqori Chirchiq", "Yangiyo'l t.", "Zangiota", "Toshkent t."],
+            "Qoraqalpog'iston Resp.": ["Nukus sh.", "Amudaryo", "Beruniy", "Qorao'zak", "Kegeyli", "Qo'ng'irot", "Qanliko'l", "Mo'ynoq", "Taxiatosh", "Taxtako'pir", "To'rtko'l", "Xo'jayli", "Chimboy", "Sho'manoy", "Ellikqal'a"]
+        };
+
+        const i18n = {
+            uz: { h: "GVARD verifikatsiyasi", t: "OMMAVIY OFFERTA: 1. Shaxsiy ma’lumotlar xavfsizlik auditidan o‘tish uchun ishlatiladi. 2. Bot qoidalariga rioya qilish majburiydir. 3. Ma’lumotlar shifrlangan holda saqlanadi.", n: "To‘liq ismingiz", r: "Viloyat", d: "Tuman / Shahar", m: "Mahalla / Ko‘cha", a: "Yoshingiz", g: "Ommaviy offerta shartlariga roziman", b: "TASDIQLASH" },
+            ru: { h: "Верификация GVARD", t: "ПУБЛИЧНАЯ ОФФЕРТА: 1. Данные используются для прохождения аудита безопасности. 2. Соблюдение правил бота обязательно. 3. Данные хранятся в зашифрованном виде.", n: "Ваше полное имя", r: "Регион", d: "Район / Город", m: "Махалля / Улица", a: "Ваш возраст", g: "Я согласен(а) с условиями", b: "ПОДТВЕРДИТЬ" },
+            en: { h: "GVARD Verification", t: "PUBLIC OFFER: 1. Data is used for security audit verification. 2. Compliance with bot rules is mandatory. 3. Data is stored in encrypted form.", n: "Full Name", r: "Region", d: "District / City", m: "Mahalla / Street", a: "Your Age", g: "I agree to the terms", b: "CONFIRM" }
+        };
+
+        const lang = new URLSearchParams(window.location.search).get('lang') || 'uz';
+        const s = i18n[lang] || i18n.uz;
+
+        function init() {
+            tg.expand();
+            document.getElementById('h').innerText = s.h;
+            document.getElementById('t').innerText = s.t;
+            document.getElementById('l1').innerText = s.n;
+            document.getElementById('l2').innerText = s.r;
+            document.getElementById('l3').innerText = s.d;
+            document.getElementById('l4').innerText = s.m;
+            document.getElementById('l5').innerText = s.a;
+            document.getElementById('l6').innerText = s.g;
+            document.getElementById('submit_btn').innerText = s.b;
+
+            const rSel = document.getElementById('reg_in');
+            rSel.innerHTML = '<option value="">---</option>';
+            Object.keys(regions).sort().forEach(r => rSel.innerHTML += `<option value="${r}">${r}</option>`);
+
+            document.querySelectorAll('input, select').forEach(el => {
+                el.addEventListener('input', validate);
+                el.addEventListener('change', validate);
+            });
+        }
+
+        function updateDist() {
+            const r = document.getElementById('reg_in').value;
+            const d = document.getElementById('dist_in');
+            d.innerHTML = '<option value="">---</option>';
+            if (r) {
+                regions[r].sort().forEach(i => d.innerHTML += `<option value="${i}">${i}</option>`);
+                d.disabled = false;
+            } else { d.disabled = true; }
+            validate();
+        }
+
+        function toggleCheckBox() {
+            const ch = document.getElementById('check_in');
+            ch.checked = !ch.checked;
+            validate();
+        }
+
+        function validate() {
+            const name = document.getElementById('name_in').value.trim();
+            const reg = document.getElementById('reg_in').value;
+            const dist = document.getElementById('dist_in').value;
+            const mah = document.getElementById('mah_in').value.trim();
+            const age = document.getElementById('age_in').value;
+            const agree = document.getElementById('check_in').checked;
+
+            const isOk = name.length > 3 && reg !== "" && dist !== "" && mah.length > 2 && age >= 16 && agree;
+
+            const btn = document.getElementById('submit_btn');
+            if (isOk) {
+                btn.classList.add('active');
+                btn.disabled = false;
+            } else {
+                btn.classList.remove('active');
+                btn.disabled = true;
+            }
+        }
+
+        function send() {
+            const res = {
+                f: document.getElementById('name_in').value.trim(),
+                r: document.getElementById('reg_in').value,
+                d: document.getElementById('dist_in').value,
+                m: document.getElementById('mah_in').value.trim(),
+                a: document.getElementById('age_in').value,
+                s: "verified"
+            };
+            tg.sendData(JSON.stringify(res));
+            tg.close();
+        }
+    </script>
+</body>
+
+</html>
