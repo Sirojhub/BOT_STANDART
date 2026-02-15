@@ -1,4 +1,5 @@
 from aiogram import Router, F, types
+from aiogram.enums import ChatType
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 import aiohttp
@@ -301,6 +302,12 @@ async def process_file_check(message: types.Message, state: FSMContext):
 @router.message(F.text.startswith("http") | F.document)
 async def monitor_messages(message: types.Message):
     """Background listener for Premium users."""
+    # ── Group File Limit (20MB) ──
+    if message.chat.type != ChatType.PRIVATE:
+        if message.document and message.document.file_size > 20 * 1024 * 1024:
+            await message.reply("⚠️ Fayl hajmi 20MB dan oshmasligi kerak (Guruh cheklovi).")
+            return
+
     user = message.from_user
     is_premium = user.is_premium or False
     
