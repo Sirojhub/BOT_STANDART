@@ -161,4 +161,5 @@ def setup_admin_routes(app):
     app.router.add_post('/api/admin/toggle', handle_toggle_action)
     app.router.add_get('/api/admin/settings', api_settings)
     app.router.add_post('/api/admin/ad-update', api_update_ad)
+    app.router.add_post('/api/admin/settings/ad', api_update_ad) # Fix for 404 error
     app.router.add_post('/api/admin/broadcast', api_broadcast)
