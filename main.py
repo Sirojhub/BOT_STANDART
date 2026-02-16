@@ -107,6 +107,23 @@ async def main():
     app['bot'] = bot
     admin.setup_admin_routes(app)
     app.router.add_get('/', health_check)
+    
+    # Serve Web App Files
+    # This makes files in 'webapp/' accessible at root level or under /webapp/
+    # For simplicity and to match current URL construction, we serve at root if possible,
+    # or ensuring WEBAPP_URL includes the path.
+    # Given we use "{WEBAPP_URL}/plans.html", if WEBAPP_URL is base domain, we need to serve at root or match the path.
+    # Best practice: serve static under a prefix or use a specific route for each known file if we want root access.
+    # However, serving 'webapp' folder at root '/' might conflict with API.
+    # Let's serve separate routes for specific files to be safe and clean.
+    app.router.add_static('/webapp', path='webapp', name='webapp')
+    
+    # Fallback/Shortcut: If WEBAPP_URL is just the domain, accessing /plans.html needs to work.
+    # We can route specific files manually or serve root static (carefully).
+    # Let's add specific routes for our known HTML files to be safe.
+    app.router.add_get('/offer.html', lambda r: web.FileResponse('webapp/offer.html'))
+    app.router.add_get('/plans.html', lambda r: web.FileResponse('webapp/plans.html'))
+    app.router.add_get('/admin.html', lambda r: web.FileResponse('webapp/admin.html'))
 
     # 6. Start Web Server
     runner = web.AppRunner(app)
