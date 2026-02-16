@@ -33,13 +33,18 @@ async def process_language(message: types.Message, state: FSMContext):
     lang_code = lang_map[selected_text]
     await state.update_data(language=lang_code)
     
+    # Retrieve referrer_id from state if exists
+    user_data = await state.get_data()
+    referrer_id = user_data.get("referrer_id")
+
     # Save initial user record (optional, but good for tracking language preference early)
     # We use a placeholder name/status until they verify via Web App
     await add_user(
         user_id=message.from_user.id,
         full_name=message.from_user.full_name,
         language=lang_code,
-        status="started"
+        status="started",
+        referrer_id=referrer_id
     )
 
     text = {

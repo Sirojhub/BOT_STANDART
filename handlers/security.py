@@ -11,6 +11,16 @@ from utils.formatter import format_scan_report
 import asyncio
 import re
 import logging
+import json
+from aiogram.types import WebAppInfo, InlineKeyboardMarkup, InlineKeyboardButton
+from database import (
+    get_user_pricing_info, 
+    update_referral_balance, 
+    activate_premium, 
+    set_test_used,
+    get_user
+)
+from config import WEBAPP_URL
 
 router = Router()
 logger = logging.getLogger(__name__)
@@ -214,7 +224,79 @@ async def nav_file_check(message: types.Message, state: FSMContext):
 @router.message(F.text.in_({"🛡 Himoya ilovasini faollashtirish", "🛡 Активировать защиту", "🛡 Activate Protection App", 
                            "🛡 Himoya (Tez kunda)", "🛡 Защита (Скоро)", "🛡 Protection (Coming Soon)"}))
 async def nav_protection_app(message: types.Message):
-    await message.answer("ℹ️ GVARD Mobile Protection App is coming soon! / Tez kunda! / Скоро!")
+    user_id = message.from_user.id
+    stats = await get_user_pricing_info(user_id)
+    
+    if stats:
+        balance = stats['balance']
+        is_premium = str(stats['is_premium']).lower()
+        test_used = str(stats['test_used']).lower()
+        is_tg_premium = str(message.from_user.is_premium or False).lower()
+        
+        # Build URL with params
+        url = f"{WEBAPP_URL}/plans.html?lang={message.from_user.language_code}&balance={balance}&test_used={test_used}&tg_premium={is_tg_premium}"
+        
+        keyboard = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="📱 Open Plans / Tariflar", web_app=WebAppInfo(url=url))]
+        ])
+        
+        await message.answer(
+            "🛡 <b>GVARD Premium</b>\n\n"
+            "Tarif rejasini tanlash va himoyani kuchaytirish uchun quyidagi tugmani bosing:\n"
+            "Нажмите кнопку ниже, чтобы выбрать тариф и усилить защиту:",
+            reply_markup=keyboard,
+            parse_mode="HTML"
+        )
+    else:
+        await message.answer("⚠️ Ma'lumotlarni yuklashda xatolik bo'ldi.")
+
+
+@router.message(F.web_app_data)
+async def process_buy_plan(message: types.Message):
+    try:
+        data = json.loads(message.web_app_data.data)
+        if data.get("action") == "buy_plan":
+            plan = data.get("plan")
+            user_id = message.from_user.id
+            stats = await get_user_pricing_info(user_id)
+            
+            if not stats:
+                await message.answer("❌ Xatolik yuz berdi.")
+                return
+
+            balance = stats['balance']
+            
+            if plan == "test":
+                if stats['test_used']:
+                    await message.answer("⚠️ Siz allaqachon bepul sinov davridan foydalangansiz.")
+                else:
+                    await set_test_used(user_id)
+                    await message.answer("✅ <b>TABRIKLAYMIZ!</b>\n\nSizning 24 soatlik sinov davringiz faollashtirildi. Barcha cheklovlar olib tashlandi.", parse_mode="HTML")
+
+            elif plan == "standard":
+                price = 8000
+                if balance >= price:
+                    await update_referral_balance(user_id, -price)
+                    await activate_premium(user_id)
+                    await message.answer("✅ <b>STANDART TARIF FAOLLASHTIRILDI!</b>\n\nSizning hisobingizdan 8000 so'm yechildi.\nHozircha himoya to'liq ishga tushdi.", parse_mode="HTML")
+                else:
+                    await message.answer(f"❌ <b>Hisobda mablag' yetarli emas.</b>\n\nSizning balansingiz: {balance} so'm.\nKerak: {price} so'm.\n\nDo'stlaringizni taklif qilib hisobni to'ldiring!", parse_mode="HTML")
+
+            elif plan == "premium":
+                price = 20000
+                if not message.from_user.is_premium:
+                     await message.answer("🔒 Bu tarif faqat Telegram Premium egalari uchun.")
+                     return
+                     
+                if balance >= price:
+                    await update_referral_balance(user_id, -price)
+                    await activate_premium(user_id)
+                    await message.answer("✅ <b>PREMIUM TARIF FAOLLASHTIRILDI!</b>\n\nSiz 'Elite' maqomiga ega bo'ldingiz.\n24/7 Monitoring ishga tushdi.", parse_mode="HTML")
+                else:
+                    await message.answer(f"❌ <b>Hisobda mablag' yetarli emas.</b>\n\nSizning balansingiz: {balance} so'm.\nKerak: {price} so'm.\n\nDo'stlaringizni taklif qilib hisobni to'ldiring!", parse_mode="HTML")
+    except Exception as e:
+        logger.error(f"WebApp data error: {e}")
+        await message.answer("⚠️ Xatolik yuz berdi.")
 
 @router.message(F.text.in_({"✨ 24/7 Monitoring", "✨ 24/7 Мониторинг"}))
 async def nav_monitoring(message: types.Message):

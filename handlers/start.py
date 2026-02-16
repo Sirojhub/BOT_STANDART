@@ -14,8 +14,22 @@ async def cmd_start(message: types.Message, state: FSMContext):
     """
     Smart /start handler.
     Checks if user is already registered.
+    Handles Referral Deep Links.
     """
     user_id = message.from_user.id
+    
+    # Check for referral args
+    command_args = message.text.split()
+    if len(command_args) > 1:
+        try:
+            referrer_id = int(command_args[1])
+            # Prevent self-referral
+            if referrer_id != user_id:
+                # Store in state temporarily, will be saved to DB during registration
+                await state.update_data(referrer_id=referrer_id)
+                logger.info(f"User {user_id} referred by {referrer_id}")
+        except ValueError:
+            pass
     
     # Update activity
     await update_last_active(user_id)

@@ -39,7 +39,11 @@ async def create_users_table():
                     registration_complete BOOLEAN DEFAULT 0,
                     last_active TIMESTAMP,
                     is_premium BOOLEAN DEFAULT 0,
-                    is_banned BOOLEAN DEFAULT 0
+                    is_banned BOOLEAN DEFAULT 0,
+                    referral_balance INTEGER DEFAULT 0,
+                    referrer_id INTEGER,
+                    test_used BOOLEAN DEFAULT 0,
+                    is_tg_premium BOOLEAN DEFAULT 0
                 )
             """)
             
@@ -60,7 +64,11 @@ async def create_users_table():
                 "last_active": "TIMESTAMP",
                 "is_premium": "BOOLEAN DEFAULT 0",
                 "is_banned": "BOOLEAN DEFAULT 0",
-                "daily_scans": "INTEGER DEFAULT 0"
+                "daily_scans": "INTEGER DEFAULT 0",
+                "referral_balance": "INTEGER DEFAULT 0",
+                "referrer_id": "INTEGER",
+                "test_used": "BOOLEAN DEFAULT 0",
+                "is_tg_premium": "BOOLEAN DEFAULT 0"
             }
 
             for col, dtype in required_columns.items():
@@ -173,7 +181,7 @@ async def get_user(user_id: int):
             # For now, consistent with existing logic (tuple)
             return await cursor.fetchone()
 
-async def add_user(user_id: int, full_name: str, language: str, status: str, is_offer_accepted: bool = True, region: str = None, district: str = None, age: int = None):
+async def add_user(user_id: int, full_name: str, language: str, status: str, is_offer_accepted: bool = True, region: str = None, district: str = None, age: int = None, referrer_id: int = None):
     """
     Legacy function wrapper to maintain compatibility if called from other modules.
     Delegates to appropriate logic or basic insert.
@@ -181,12 +189,60 @@ async def add_user(user_id: int, full_name: str, language: str, status: str, is_
     async with aiosqlite.connect(DB_NAME) as db:
         try:
             await db.execute("""
-                INSERT OR REPLACE INTO users (user_id, full_name, language, status, is_offer_accepted, region, district, age, last_active, created_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, COALESCE((SELECT created_at FROM users WHERE user_id=?), CURRENT_TIMESTAMP))
-            """, (user_id, full_name, language, status, is_offer_accepted, region, district, age, user_id))
+                INSERT OR REPLACE INTO users (user_id, full_name, language, status, is_offer_accepted, region, district, age, last_active, referrer_id, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?, COALESCE((SELECT created_at FROM users WHERE user_id=?), CURRENT_TIMESTAMP))
+            """, (user_id, full_name, language, status, is_offer_accepted, region, district, age, referrer_id, user_id))
             await db.commit()
         except Exception as e:
             logger.error(f"Error in add_user for {user_id}: {e}")
+
+async def update_referral_balance(user_id: int, amount: int):
+    """Add (or subtract) amount to user's referral balance."""
+    async with aiosqlite.connect(DB_NAME) as db:
+        await db.execute("UPDATE users SET referral_balance = referral_balance + ? WHERE user_id = ?", (amount, user_id))
+        await db.commit()
+
+async def get_user_balance(user_id: int) -> int:
+    async with aiosqlite.connect(DB_NAME) as db:
+        async with db.execute("SELECT referral_balance FROM users WHERE user_id = ?", (user_id,)) as cursor:
+            row = await cursor.fetchone()
+            return row[0] if row else 0
+
+async def set_test_used(user_id: int):
+    async with aiosqlite.connect(DB_NAME) as db:
+        await db.execute("UPDATE users SET test_used = 1, is_premium = 1 WHERE user_id = ?", (user_id,))
+        await db.commit()
+
+async def activate_premium(user_id: int, duration_days: int = 30):
+    """Activate premium and handle referrer cashback."""
+    async with aiosqlite.connect(DB_NAME) as db:
+        # Activate premium
+        await db.execute("UPDATE users SET is_premium = 1 WHERE user_id = ?", (user_id,))
+        
+        # Get referrer
+        async with db.execute("SELECT referrer_id FROM users WHERE user_id = ?", (user_id,)) as cursor:
+            row = await cursor.fetchone()
+            referrer_id = row[0] if row else None
+            
+        # Cashback (1000 UZS)
+        if referrer_id:
+            await db.execute("UPDATE users SET referral_balance = referral_balance + 1000 WHERE user_id = ?", (referrer_id,))
+            
+        await db.commit()
+
+async def get_user_pricing_info(user_id: int):
+    """Get info needed for Plans Web App."""
+    async with aiosqlite.connect(DB_NAME) as db:
+        async with db.execute("SELECT referral_balance, is_premium, test_used, is_tg_premium FROM users WHERE user_id = ?", (user_id,)) as cursor:
+            row = await cursor.fetchone()
+            if row:
+                return {
+                    "balance": row[0],
+                    "is_premium": bool(row[1]),
+                    "test_used": bool(row[2]),
+                    "is_tg_premium": bool(row[3])
+                }
+            return None
 
 # --- Admin Panel Functions ---
 
