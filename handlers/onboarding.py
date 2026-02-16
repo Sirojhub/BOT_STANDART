@@ -59,14 +59,53 @@ async def process_language(message: types.Message, state: FSMContext):
 async def process_webapp_data(message: types.Message, state: FSMContext):
     """
     Handles data received from the Web App.
-    Parses JSON payload with keys: f, r, d, m, a, s.
+    Parses JSON payload. Supports both legacy full form and new agreement-only flow.
     """
     try:
         # Parse JSON data
         data = json.loads(message.web_app_data.data)
         logger.info(f"Received Web App data: {data}")
 
-        # Extract fields based on Web App keys
+        # Check for new flow (Offer Accepted)
+        if data.get("offer_accepted"):
+            # Use defaults for missing fields since we removed the form
+            full_name = message.from_user.full_name or "Unknown"
+            region = ""
+            district = ""
+            mahalla = ""
+            age = 0
+            status = "verified"
+            
+            # Save to database (Updating existing record or creating new)
+            success = await save_webapp_data(
+                user_id=message.from_user.id,
+                full_name=full_name,
+                region=region,
+                district=district,
+                mahalla=mahalla,
+                age=age
+            )
+
+            if success:
+                user_data = await state.get_data()
+                language = user_data.get("language", "en")
+                
+                text = {
+                    "uz": "✅ Offerta qabul qilindi! 📱 Endi telefon raqamingizni yuboring:",
+                    "ru": "✅ Оферта принята! 📱 Теперь отправьте ваш номер телефона:",
+                    "en": "✅ Offer accepted! 📱 Now please share your phone number:"
+                }
+                
+                await message.answer(
+                    text.get(language, "en"),
+                    reply_markup=get_phone_keyboard(language)
+                )
+                await state.set_state(Registration.waiting_for_phone)
+            else:
+                await message.answer("❌ Server error while saving data. Please contact support.")
+            return
+
+        # Legacy Flow (Keep for backward compatibility if needed)
         full_name = data.get("f")
         region = data.get("r")
         district = data.get("d")

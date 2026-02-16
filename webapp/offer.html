@@ -4,229 +4,346 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GVARD Verification</title>
+    <title>SARHAD Public Offer</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --blue: #0052cc;
-            --light: #f8fafc;
-            --gray: #94a3b8;
+            --primary: #0088cc;
+            --bg: #f8fafc;
+            --text: #1e293b;
+            --border: #e2e8f0;
         }
 
         body {
             font-family: 'Inter', sans-serif;
-            background: var(--light);
-            color: #1e293b;
+            background: var(--bg);
+            color: var(--text);
             margin: 0;
-            padding: 15px;
+            padding: 16px;
             display: flex;
             justify-content: center;
         }
 
-        .card {
+        .container {
             background: #fff;
             border-radius: 16px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-            padding: 25px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            padding: 24px;
             width: 100%;
-            max-width: 450px;
-            border: 1px solid #e2e8f0;
+            max-width: 600px;
+            border: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            height: calc(100vh - 32px);
+            box-sizing: border-box;
         }
 
         h2 {
-            color: var(--blue);
+            color: var(--primary);
             text-align: center;
-            margin-bottom: 20px;
-            font-weight: 600;
+            margin: 0 0 16px 0;
+            font-size: 1.25rem;
+            font-weight: 700;
+            flex-shrink: 0;
         }
 
-        .terms-box {
-            background: #f1f5f9;
-            border: 1px solid #e2e8f0;
-            height: 110px;
+        .content-box {
+            flex-grow: 1;
             overflow-y: auto;
-            padding: 12px;
-            font-size: 0.85rem;
+            border: 1px solid var(--border);
             border-radius: 8px;
-            margin-bottom: 15px;
-            color: #64748b;
+            padding: 16px;
+            margin-bottom: 20px;
+            background: #fff;
+            font-size: 0.9rem;
             line-height: 1.6;
+            text-align: justify;
         }
 
-        .group {
+        .content-box h3 {
+            font-size: 1rem;
+            margin-top: 16px;
+            margin-bottom: 8px;
+            color: #0f172a;
+        }
+
+        .content-box p {
             margin-bottom: 12px;
-            text-align: left;
+            color: #475569;
         }
 
-        label {
-            display: block;
-            font-size: 0.8rem;
-            font-weight: 500;
-            margin-bottom: 4px;
-            color: var(--gray);
+        .controls {
+            flex-shrink: 0;
+            border-top: 1px solid var(--border);
+            padding-top: 20px;
         }
 
-        input,
-        select {
-            width: 100%;
-            padding: 12px;
-            border: 1px solid #cbd5e1;
-            border-radius: 8px;
-            box-sizing: border-box;
-            font-size: 0.95rem;
-            outline: none;
-            transition: 0.2s;
-        }
-
-        input:focus,
-        select:focus {
-            border-color: var(--blue);
-        }
-
-        /* Rozilik qismi - eng muhim joyi */
-        .agree-container {
+        .checkbox-wrapper {
             display: flex;
-            align-items: center;
+            align-items: flex-start;
             gap: 12px;
-            margin: 20px 0;
-            padding: 10px;
-            background: #f8fafc;
-            border-radius: 8px;
+            margin-bottom: 20px;
             cursor: pointer;
             user-select: none;
+            padding: 12px;
+            border-radius: 8px;
+            transition: background 0.2s;
+        }
+
+        .checkbox-wrapper:hover {
+            background: #f1f5f9;
         }
 
         input[type="checkbox"] {
-            width: 22px;
-            height: 22px;
+            width: 20px;
+            height: 20px;
+            margin-top: 2px;
             cursor: pointer;
-            margin: 0;
+        }
+
+        label {
+            font-size: 0.9rem;
+            color: #334155;
+            cursor: pointer;
+            line-height: 1.4;
         }
 
         button {
             width: 100%;
-            padding: 15px;
-            background: #e2e8f0;
-            color: #94a3b8;
+            padding: 16px;
+            background: #cbd5e1;
+            color: #64748b;
             border: none;
-            border-radius: 8px;
+            border-radius: 12px;
             font-weight: 600;
             font-size: 1rem;
             cursor: not-allowed;
-            transition: 0.3s;
-            pointer-events: none;
+            transition: all 0.3s ease;
         }
 
         button.active {
-            background: var(--blue);
+            background: var(--primary);
             color: #fff;
             cursor: pointer;
-            box-shadow: 0 4px 12px rgba(0, 82, 204, 0.2);
-            pointer-events: auto;
+            box-shadow: 0 4px 12px rgba(0, 136, 204, 0.2);
+        }
+
+        button.active:hover {
+            background: #0077b3;
+            transform: translateY(-1px);
+        }
+
+        #timer {
+            font-size: 0.85rem;
+            color: #64748b;
+            text-align: center;
+            margin-top: 12px;
+            height: 20px;
+        }
+
+        /* Scrollbar styling */
+        .content-box::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .content-box::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+
+        .content-box::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 3px;
         }
     </style>
 </head>
 
 <body onload="init()">
-    <div class="card">
-        <h2 id="h">GVARD</h2>
-        <div id="t" class="terms-box">Yuklanmoqda...</div>
-
-        <div class="group"><label id="l1">Ism</label><input type="text" id="name_in"></div>
-        <div class="group"><label id="l2">Viloyat</label><select id="reg_in" onchange="updateDist()"></select></div>
-        <div class="group"><label id="l3">Tuman</label><select id="dist_in" disabled></select></div>
-        <div class="group"><label id="l4">Mahalla</label><input type="text" id="mah_in"></div>
-        <div class="group"><label id="l5">Yosh</label><input type="number" id="age_in" min="16"></div>
-
-        <div class="agree-container" onclick="toggleCheckBox()">
-            <input type="checkbox" id="check_in" onclick="event.stopPropagation(); validate();">
-            <span id="l6" style="font-size: 0.85rem; line-height: 1.2;">Ommaviy offerta shartlariga roziman</span>
+    <div class="container">
+        <h2 id="title">SARHAD OFFERTA</h2>
+        <div id="content" class="content-box">
+            <!-- Content injects here -->
         </div>
 
-        <button id="submit_btn" onclick="send()">TASDIQLASH</button>
+        <div class="controls">
+            <div class="checkbox-wrapper" onclick="toggleCheck()">
+                <input type="checkbox" id="agree_check" onclick="event.stopPropagation(); validate();" disabled>
+                <label id="agree_text" for="agree_check">Ommaviy offerta shartlariga roziman</label>
+            </div>
+            <button id="submit_btn" onclick="submitData()">ROZIMAN (30s)</button>
+            <div id="timer"></div>
+        </div>
     </div>
 
     <script>
         const tg = window.Telegram.WebApp;
+        let timeLeft = 30;
+        let timerInterval;
 
-        const regions = {
-            "Toshkent sh.": ["Bektemir", "Chilonzor", "Mirobod", "Mirzo Ulug'bek", "Olmazor", "Sergeli", "Shayxontohur", "Uchtepa", "Yakkasaroy", "Yashnobod", "Yunusobod", "Yangihayot"],
-            "Andijon": ["Andijon sh.", "Xonobod sh.", "Asaka", "Baliqchi", "Bo'ston", "Buloqboshi", "Izboskan", "Jalaquduq", "Marhamat", "Oltinko'l", "Paxtaobod", "Qo'rg'ontepa", "Shahrixon", "Ulug'nor", "Xo'jaobod"],
-            "Buxoro": ["Buxoro sh.", "Kogon sh.", "Buxoro t.", "Gijduvon", "Jondor", "Kogon t.", "Qorako'l", "Qorovulbozor", "Olot", "Peshku", "Romitan", "Shofirkon", "Vobkent"],
-            "Farg'ona": ["Farg'ona sh.", "Qo'qon sh.", "Marg'ilon sh.", "Quvasoy sh.", "Oltiariq", "Bag'dod", "Beshariq", "Buvayda", "Dang'ara", "Furqat", "Qo'shtepa", "Quva", "Rishton", "So'x", "Toshloq", "Uchko'prik", "Yozyovon", "O'zbekiston"],
-            "Jizzax": ["Jizzax sh.", "Arnasoy", "Baxmal", "Do'stlik", "Forish", "G'allaorol", "Sharof Rashidov", "Mirzacho'l", "Paxtakor", "Yangiobod", "Zomin", "Zafarobod", "Zarbdor"],
-            "Xorazm": ["Urganch sh.", "Xiva sh.", "Bog'ot", "Gurlan", "Qo'shko'pir", "Shovot", "Tuproqqal'a", "Urganch t.", "Xiva t.", "Xonqa", "Hazorasp", "Yangiariq", "Yangibozor"],
-            "Namangan": ["Namangan sh.", "Chortoq", "Chust", "Kosonsoy", "Mingbuloq", "Norin", "Pop", "To'raqo'rg'on", "Uychi", "Uchqo'rg'on", "Yangiqo'rg'on", "Davlatobod", "Yangi Namangan"],
-            "Navoiy": ["Navoiy sh.", "Zarafshon sh.", "G'ozg'on sh.", "Karmana", "Konimex", "Qiziltepa", "Xatirchi", "Navbahor", "Nurota", "Tomdi", "Uchkuduk"],
-            "Qashqadaryo": ["Qarshi sh.", "Shahrisabz sh.", "Dehqonobod", "Kasbi", "Kitob", "Koson", "Ko'kdala", "Mirishkor", "Muborak", "Nishon", "Qamashi", "Qarshi t.", "Shahrisabz t.", "Chiroqchi", "G'uzor", "Yakkabog'"],
-            "Samarqand": ["Samarqand sh.", "Kattaqo'rg'on sh.", "Oqdaryo", "Bulung'ur", "Ishtixon", "Jomboy", "Kattaqo'rg'on t.", "Narpay", "Nurobod", "Payariq", "Pastdarg'om", "Paxtachi", "Samarqand t.", "Toyloq", "Urgut", "Qo'shrabot"],
-            "Sirdaryo": ["Guliston sh.", "Yangiyer sh.", "Shirin sh.", "Boyovut", "Guliston t.", "Sardoba", "Mirzaobod", "Oqoltin", "Sayhunobod", "Sirdaryo t.", "Xovos"],
-            "Surxondaryo": ["Termiz sh.", "Angor", "Boysun", "Denov", "Jarqo'rg'on", "Qiziriq", "Qumqo'rg'on", "Muzrabot", "Oltinsoy", "Sariosiyo", "Sherobod", "Sho'rchi", "Termiz t.", "Uzun"],
-            "Toshkent v.": ["Nurafshon sh.", "Angren sh.", "Bekobod sh.", "Olmaliq sh.", "Chirchiq sh.", "Yangiyo'l sh.", "Ohangaron sh.", "Bekobod t.", "Bo'stonliq", "Bo'ka", "Chinoz", "Qibray", "Ohangaron t.", "Oqqo'rg'on", "Parkent", "Piskent", "Quyi Chirchiq", "O'rta Chirchiq", "Yuqori Chirchiq", "Yangiyo'l t.", "Zangiota", "Toshkent t."],
-            "Qoraqalpog'iston Resp.": ["Nukus sh.", "Amudaryo", "Beruniy", "Qorao'zak", "Kegeyli", "Qo'ng'irot", "Qanliko'l", "Mo'ynoq", "Taxiatosh", "Taxtako'pir", "To'rtko'l", "Xo'jayli", "Chimboy", "Sho'manoy", "Ellikqal'a"]
+        const texts = {
+            uz: {
+                title: "🛡 \"SARHAD\" TIZIMIDAN FOYDALANISH BO‘YICHA OMMAVIY OFFERTA",
+                agree: "Men ushbu Offerta shartlarini to‘liq o‘qidim va qabul qilaman.",
+                btn_wait: "ROZIMAN ({s}s)",
+                btn_ready: "ROZIMAN",
+                content: `
+                    <h3>1. UMUMIY QOIDALAR VA ATAMALAR</h3>
+                    <p>1.1. Mazkur hujjat "Sarhad" loyihasi (bundan buyon matnda – Tizim) va jismoniy shaxs (bundan buyon matnda – Foydalanuvchi) o‘rtasidagi o‘zaro hamkorlik shartlarini belgilovchi rasmiy kelishuv hisoblanadi.</p>
+                    <p>1.2. Foydalanuvchi Tizimni ishga tushirgan va aloqa ma'lumotlarini taqdim etgan vaqtdan boshlab ushbu Offerta shartlarini to‘liq va so‘zsiz qabul qilgan (aksept) hisoblanadi.</p>
+                    <p>1.3. Tizim – bu foydalanuvchilarga raqamli resurslar, havolalar va dasturiy ta'minotlar haqida axborot-tahliliy ma'lumotlar taqdim etuvchi intellektual yordamchidir.</p>
+
+                    <h3>2. TOMONLARNING HUQUQ VA MAJBURIYATLARI</h3>
+                    <p>2.1. Tizimning majburiyatlari: Foydalanuvchi tomonidan taqdim etilgan ob'ektlarni (fayl va havolalar) tahlil qilish va mavjud xalqaro ma'lumotlar asosida hisobot shakllantirish. Foydalanuvchining shaxsiy daxlsizligini ta'minlash va u tomonidan taqdim etilgan ism hamda telefon raqamidan faqat xizmat ko‘rsatish doirasida foydalanish.</p>
+                    <p>2.2. Foydalanuvchining majburiyatlari: Tizimdan faqat qonuniy maqsadlarda foydalanish. Tizim taqdim etgan ma'lumotlarni yakuniy va mutlaq deb qabul qilmasdan, ularni qo‘shimcha ma'lumot sifatida baholash.</p>
+
+                    <h3>3. XIZMAT KO‘RSATISH TARTIBI VA TEXNIK JIHATLAR</h3>
+                    <p>3.1. Tizim foydalanuvchi yuborgan ma'lumotlarni bir necha bosqichli tahlildan o‘tkazadi va ularning xavfsizlik darajasi bo‘yicha ehtimoliy xulosalarni taqdim etadi.</p>
+                    <p>3.2. Tizim o‘z faoliyatida eng zamonaviy axborot xavfsizligi resurslari bilan hamkorlik qiladi va olingan ma'lumotlarni tushunarli ko‘rinishda foydalanuvchiga yetkazadi.</p>
+                    <p>3.3. Tizimning ishlash tezligi va aniqligi ob'ektning hajmi hamda uning global tarmoqdagi ommabopligiga bog‘liq bo‘lishi mumkin.</p>
+
+                    <h3>4. MAS’ULIYATNING CHEKLANISHI (MUHIM BANT)</h3>
+                    <p>4.1. Axborot xususiyati: Tizim tomonidan taqdim etiladigan barcha hisobotlar, xulosalar va natijalar faqat axborot (konsultatsiya) xususiyatiga ega. Ular muayyan harakatni amalga oshirish uchun buyruq yoki kafolat hisoblanmaydi.</p>
+                    <p>4.2. Mustaqil qaror: Foydalanuvchi Tizim bergan ma'lumotlarni o‘rganib chiqqan holda, har qanday havola ustiga bosish yoki faylni o‘z qurilmasiga o‘rnatish bo‘yicha qarorni o‘z xohishi va mas'uliyati ostida qabul qiladi.</p>
+                    <p>4.3. Zararni qoplash: Foydalanuvchi tomonidan Tizim ma'lumotlariga tayangan holda qabul qilingan qarorlar natijasida yuzaga kelishi mumkin bo‘lgan bevosita yoki bilvosita moddiy va ma'naviy zararlar, ma'lumotlar yo‘qolishi yoki qurilmalarning nosozligi uchun Tizim ma'murlari aybdor deb topilmaydi va moddiy tovon to‘lash majburiyatini olmaydi.</p>
+                    <p>4.4. Uchinchi tomon xizmatlari: Tizim tahlil jarayonida uchinchi tomon platformalari ma'lumotlaridan foydalanadi va ushbu platformalarning tahliliy xatoliklari uchun javobgar emas.</p>
+
+                    <h3>5. OBUNA VA TARIFLAR</h3>
+                    <p>5.1. Tizimda foydalanuvchilarga qulaylik yaratish maqsadida turli darajadagi xizmat ko‘rsatish paketlari (Test, Standart, Premium) joriy etilgan.</p>
+                    <p>5.2. Pullik obunalar Tizimning barqaror ishlashi va uni texnik jihatdan takomillashtirishga yo‘naltiriladi. To‘lov amalga oshirilgandan so‘ng foydalanuvchi ko‘rsatilgan muddat davomida kengaytirilgan imkoniyatlardan foydalanish huquqini qo‘lga kiritadi.</p>
+
+                    <h3>6. MAXFIYLIK SIYOSATI</h3>
+                    <p>6.1. Foydalanuvchining ismi va telefon raqami Tizimning ichki xavfsiz xotirasida saqlanadi va hech qanday holatda begona shaxslarga tijorat maqsadlarida sotilmaydi.</p>
+                    <p>6.2. Foydalanuvchi Tizimni o‘chirib tashlash orqali o‘z ma'lumotlarini bazadan o‘chirishni so‘rash huquqiga ega.</p>
+
+                    <h3>7. YAKUNIY QOIDALAR</h3>
+                    <p>7.1. Tizim ma'murlari mazkur Offerta matnini istalgan vaqtda bir tomonlama o‘zgartirish huquqiga ega. Yangi tahrir Tizimda e'lon qilingan vaqtdan boshlab kuchga kiradi.</p>
+                    <p>7.2. Mazkur hujjat bilan bog‘liq bo‘lgan barcha nizolar o‘zaro muzokaralar yo‘li bilan hal etiladi.</p>
+                `
+            },
+            ru: {
+                title: "🛡 ПУБЛИЧНАЯ ОФЕРТА ИСПОЛЬЗОВАНИЯ СИСТЕМЫ \"SARHAD\"",
+                agree: "Я прочитал и принимаю условия данной Оферты.",
+                btn_wait: "ПРИНИМАЮ ({s}с)",
+                btn_ready: "ПРИНИМАЮ",
+                content: `
+                    <h3>1. ОБЩИЕ ПОЛОЖЕНИЯ И ТЕРМИНЫ</h3>
+                    <p>1.1. Настоящий документ является официальным соглашением, определяющим условия взаимодействия между проектом «Sarhad» (далее – Система) и физическим лицом (далее – Пользователь).</p>
+                    <p>1.2. Пользователь считается принявшим (акцептовавшим) условия настоящей Оферты полностью и безоговорочно с момента запуска Системы и предоставления контактных данных.</p>
+                    <p>1.3. Система – это интеллектуальный помощник, предоставляющий пользователям информационно-аналитические сведения о цифровых ресурсах, ссылках и программном обеспечении.</p>
+
+                    <h3>2. ПРАВА И ОБЯЗАННОСТИ СТОРОН</h3>
+                    <p>2.1. Обязанности Системы: Анализировать предоставленные Пользователем объекты (файлы и ссылки) и формировать отчет на основе имеющихся международных данных. Обеспечивать конфиденциальность Пользователя и использовать предоставленные им имя и номер телефона только в рамках предоставления услуг.</p>
+                    <p>2.2. Обязанности Пользователя: Использовать Систему только в законных целях. Не воспринимать данные, предоставленные Системой, как окончательные и абсолютные, а оценивать их как дополнительную информацию.</p>
+
+                    <h3>3. ПОРЯДОК ПРЕДОСТАВЛЕНИЯ УСЛУГ И ТЕХНИЧЕСКИЕ АСПЕКТЫ</h3>
+                    <p>3.1. Система проводит многоступенчатый анализ отправленных пользователем данных и предоставляет вероятностные заключения об уровне их безопасности.</p>
+                    <p>3.2. В своей деятельности Система сотрудничает с передовыми ресурсами информационной безопасности и предоставляет полученные данные в понятном для пользователя виде.</p>
+                    <p>3.3. Скорость работы и точность Системы могут зависеть от объема объекта и его популярности в глобальной сети.</p>
+
+                    <h3>4. ОГРАНИЧЕНИЕ ОТВЕТСТВЕННОСТИ (ВАЖНО)</h3>
+                    <p>4.1. Информационный характер: Все отчеты, заключения и результаты, предоставляемые Системой, носят исключительно информационный (консультативный) характер. Они не являются приказом или гарантией для совершения определенных действий.</p>
+                    <p>4.2. Самостоятельное решение: Пользователь, изучив предоставленные Системой данные, принимает решение о переходе по ссылке или установке файла на свое устройство самостоятельно и под свою ответственность.</p>
+                    <p>4.3. Возмещение ущерба: Администрация Системы не несет ответственности и не принимает на себя обязательства по выплате материальной компенсации за прямой или косвенный материальный и моральный ущерб, потерю данных или неисправность устройств, возникшие в результате решений, принятых Пользователем на основе данных Системы.</p>
+                    <p>4.4. Сторонние сервисы: В процессе анализа Система использует данные сторонних платформ и не несет ответственности за аналитические ошибки этих платформ.</p>
+
+                    <h3>5. ПОДПИСКА И ТАРИФЫ</h3>
+                    <p>5.1. Для удобства пользователей в Системе внедрены пакеты услуг различного уровня (Test, Standard, Premium).</p>
+                    <p>5.2. Платные подписки направляются на обеспечение стабильной работы Системы и ее техническое совершенствование. После оплаты пользователь получает право использовать расширенные возможности в течение указанного срока.</p>
+
+                    <h3>6. ПОЛИТИКА КОНФИДЕНЦИАЛЬНОСТИ</h3>
+                    <p>6.1. Имя и номер телефона Пользователя хранятся во внутренней защищенной памяти Системы и ни при каких обстоятельствах не продаются третьим лицам в коммерческих целях.</p>
+                    <p>6.2. Пользователь имеет право запросить удаление своих данных из базы, удалив Систему.</p>
+
+                    <h3>7. ЗАКЛЮЧИТЕЛЬНЫЕ ПОЛОЖЕНИЯ</h3>
+                    <p>7.1. Администрация Системы имеет право в одностороннем порядке изменять текст настоящей Оферты в любое время. Новая редакция вступает в силу с момента публикации в Системе.</p>
+                    <p>7.2. Все споры, связанные с настоящим документом, решаются путем переговоров.</p>
+                `
+            },
+            en: {
+                title: "🛡 PUBLIC OFFER FOR USE OF \"SARHAD\" SYSTEM",
+                agree: "I have read and accept the terms of this Offer.",
+                btn_wait: "I AGREE ({s}s)",
+                btn_ready: "I AGREE",
+                content: `
+                    <h3>1. GENERAL PROVISIONS AND TERMS</h3>
+                    <p>1.1. This document is an official agreement defining the terms of interaction between the "Sarhad" project (hereinafter referred to as the System) and an individual (hereinafter referred to as the User).</p>
+                    <p>1.2. The User is considered to have fully and unconditionally accepted (accepted) the terms of this Offer from the moment of launching the System and providing contact information.</p>
+                    <p>1.3. The System is an intelligent assistant that provides users with information and analytical data about digital resources, links, and software.</p>
+
+                    <h3>2. RIGHTS AND OBLIGATIONS OF THE PARTIES</h3>
+                    <p>2.1. Obligations of the System: To analyze objects (files and links) provided by the User and form a report based on available international data. To ensure the User's privacy and use the provided name and phone number only within the scope of service provision.</p>
+                    <p>2.2. Obligations of the User: To use the System only for legal purposes. To evaluate the data provided by the System as additional information, not as final and absolute.</p>
+
+                    <h3>3. SERVICE PROCEDURE AND TECHNICAL ASPECTS</h3>
+                    <p>3.1. The System performs a multi-stage analysis of data sent by the user and provides probabilistic conclusions about their security level.</p>
+                    <p>3.2. In its activities, the System cooperates with advanced information security resources and delivers the obtained data to the user in an understandable form.</p>
+                    <p>3.3. The speed and accuracy of the System may depend on the size of the object and its popularity in the global network.</p>
+
+                    <h3>4. LIMITATION OF LIABILITY (IMPORTANT)</h3>
+                    <p>4.1. Informational Nature: All reports, conclusions, and results provided by the System are of an informational (consultative) nature only. They constitute neither an order nor a guarantee for specific actions.</p>
+                    <p>4.2. Independent Decision: The User, having studied the data provided by the System, makes the decision to click on a link or install a file on their device at their own discretion and risk.</p>
+                    <p>4.3. Compensation: The System administrators are not liable and do not undertake obligations to pay material compensation for direct or indirect material and moral damages, data loss, or device malfunction resulting from decisions made by the User relying on System data.</p>
+                    <p>4.4. Third-Party Services: During the analysis process, the System uses data from third-party platforms and is not responsible for analytical errors of these platforms.</p>
+
+                    <h3>5. SUBSCRIPTION AND TARIFFS</h3>
+                    <p>5.1. To ensure user convenience, service packages of different levels (Test, Standard, Premium) have been introduced in the System.</p>
+                    <p>5.2. Paid subscriptions are directed towards the stable operation of the System and its technical improvement. After payment, the user gains the right to use extended features for the specified period.</p>
+
+                    <h3>6. PRIVACY POLICY</h3>
+                    <p>6.1. The User's name and phone number are stored in the System's internal secure memory and are under no circumstances sold to third parties for commercial purposes.</p>
+                    <p>6.2. The User has the right to request the deletion of their data from the database by deleting the System.</p>
+
+                    <h3>7. FINAL PROVISIONS</h3>
+                    <p>7.1. The System administrators have the right to unilaterally change the text of this Offer at any time. The new version comes into force from the moment of publication in the System.</p>
+                    <p>7.2. All disputes related to this document shall be resolved through negotiations.</p>
+                `
+            }
         };
 
-        const i18n = {
-            uz: { h: "GVARD verifikatsiyasi", t: "OMMAVIY OFFERTA: 1. Shaxsiy ma’lumotlar xavfsizlik auditidan o‘tish uchun ishlatiladi. 2. Bot qoidalariga rioya qilish majburiydir. 3. Ma’lumotlar shifrlangan holda saqlanadi.", n: "To‘liq ismingiz", r: "Viloyat", d: "Tuman / Shahar", m: "Mahalla / Ko‘cha", a: "Yoshingiz", g: "Ommaviy offerta shartlariga roziman", b: "TASDIQLASH" },
-            ru: { h: "Верификация GVARD", t: "ПУБЛИЧНАЯ ОФФЕРТА: 1. Данные используются для прохождения аудита безопасности. 2. Соблюдение правил бота обязательно. 3. Данные хранятся в зашифрованном виде.", n: "Ваше полное имя", r: "Регион", d: "Район / Город", m: "Махалля / Улица", a: "Ваш возраст", g: "Я согласен(а) с условиями", b: "ПОДТВЕРДИТЬ" },
-            en: { h: "GVARD Verification", t: "PUBLIC OFFER: 1. Data is used for security audit verification. 2. Compliance with bot rules is mandatory. 3. Data is stored in encrypted form.", n: "Full Name", r: "Region", d: "District / City", m: "Mahalla / Street", a: "Your Age", g: "I agree to the terms", b: "CONFIRM" }
-        };
-
-        const lang = new URLSearchParams(window.location.search).get('lang') || 'uz';
-        const s = i18n[lang] || i18n.uz;
+        const langParams = new URLSearchParams(window.location.search).get('lang');
+        const langCode = (['uz', 'ru', 'en'].includes(langParams)) ? langParams : 'uz';
+        const t = texts[langCode];
 
         function init() {
             tg.expand();
-            document.getElementById('h').innerText = s.h;
-            document.getElementById('t').innerText = s.t;
-            document.getElementById('l1').innerText = s.n;
-            document.getElementById('l2').innerText = s.r;
-            document.getElementById('l3').innerText = s.d;
-            document.getElementById('l4').innerText = s.m;
-            document.getElementById('l5').innerText = s.a;
-            document.getElementById('l6').innerText = s.g;
-            document.getElementById('submit_btn').innerText = s.b;
 
-            const rSel = document.getElementById('reg_in');
-            rSel.innerHTML = '<option value="">---</option>';
-            Object.keys(regions).sort().forEach(r => rSel.innerHTML += `<option value="${r}">${r}</option>`);
+            // Set texts
+            document.getElementById('title').innerText = t.title;
+            document.getElementById('content').innerHTML = t.content;
+            document.getElementById('agree_text').innerText = t.agree;
 
-            document.querySelectorAll('input, select').forEach(el => {
-                el.addEventListener('input', validate);
-                el.addEventListener('change', validate);
-            });
+            // Start timer
+            updateTimerBtn();
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                updateTimerBtn();
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    document.getElementById('agree_check').disabled = false;
+                    document.getElementById('submit_btn').innerText = t.btn_ready;
+                    validate();
+                }
+            }, 1000);
         }
 
-        function updateDist() {
-            const r = document.getElementById('reg_in').value;
-            const d = document.getElementById('dist_in');
-            d.innerHTML = '<option value="">---</option>';
-            if (r) {
-                regions[r].sort().forEach(i => d.innerHTML += `<option value="${i}">${i}</option>`);
-                d.disabled = false;
-            } else { d.disabled = true; }
-            validate();
+        function updateTimerBtn() {
+            if (timeLeft > 0) {
+                document.getElementById('submit_btn').innerText = t.btn_wait.replace('{s}', timeLeft);
+            }
         }
 
-        function toggleCheckBox() {
-            const ch = document.getElementById('check_in');
-            ch.checked = !ch.checked;
+        function toggleCheck() {
+            if (timeLeft > 0) return; // Cannot check while timer is running
+            const checkbox = document.getElementById('agree_check');
+            checkbox.checked = !checkbox.checked;
             validate();
         }
 
         function validate() {
-            const name = document.getElementById('name_in').value.trim();
-            const reg = document.getElementById('reg_in').value;
-            const dist = document.getElementById('dist_in').value;
-            const mah = document.getElementById('mah_in').value.trim();
-            const age = document.getElementById('age_in').value;
-            const agree = document.getElementById('check_in').checked;
-
-            const isOk = name.length > 3 && reg !== "" && dist !== "" && mah.length > 2 && age >= 16 && agree;
-
+            const checked = document.getElementById('agree_check').checked;
             const btn = document.getElementById('submit_btn');
-            if (isOk) {
+
+            if (checked && timeLeft <= 0) {
                 btn.classList.add('active');
                 btn.disabled = false;
             } else {
@@ -235,16 +352,13 @@
             }
         }
 
-        function send() {
-            const res = {
-                f: document.getElementById('name_in').value.trim(),
-                r: document.getElementById('reg_in').value,
-                d: document.getElementById('dist_in').value,
-                m: document.getElementById('mah_in').value.trim(),
-                a: document.getElementById('age_in').value,
-                s: "verified"
+        function submitData() {
+            const data = {
+                status: "verified",
+                offer_accepted: true,
+                timestamp: new Date().toISOString()
             };
-            tg.sendData(JSON.stringify(res));
+            tg.sendData(JSON.stringify(data));
             tg.close();
         }
     </script>
