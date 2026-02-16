@@ -2,8 +2,8 @@ from aiogram import Router, F, types
 from aiogram.filters import CommandStart
 from aiogram.fsm.context import FSMContext
 from states import Registration
-from keyboards import get_language_keyboard, get_agreement_keyboard, get_phone_keyboard, get_main_menu_keyboard
-from database import save_webapp_data, update_user_phone, add_user
+from keyboards import get_language_keyboard, get_agreement_keyboard, get_phone_keyboard, get_main_menu_keyboard, get_plans_keyboard
+from database import save_webapp_data, update_user_phone, add_user, get_user_pricing_info
 import json
 import logging
 
@@ -188,17 +188,25 @@ async def process_phone(message: types.Message, state: FSMContext):
             # but user.is_premium is the Telegram status.
             is_premium = message.from_user.is_premium or False
 
+            # Get user pricing info to pass to plans keyboard
+            # At this stage, balance is likely 0, test_used false, but good to be explicit
+            pricing_info = await get_user_pricing_info(user_id)
+            balance = pricing_info['balance'] if pricing_info else 0
+            test_used = str(pricing_info['test_used']).lower() if pricing_info else "false"
+            is_tg_premium = str(message.from_user.is_premium or False).lower()
+
             text = {
-                "uz": "🎉 Ro'yxatdan o'tish muvaffaqiyatli yakunlandi! Xavfsizlik tizimi faollashdi.",
-                "ru": "🎉 Регистрация успешно завершена! Система безопасности активирована.",
-                "en": "🎉 Registration completed successfully! Security system activated."
+                "uz": "🎉 Ro'yxatdan o'tish muvaffaqiyatli yakunlandi!\n\nEndi botdan to'liq foydalanish uchun o'zingizga mos tarifni tanlang:",
+                "ru": "🎉 Регистрация успешно завершена!\n\nТеперь выберите подходящий тариф для использования бота:",
+                "en": "🎉 Registration completed successfully!\n\nNow please choose a plan to start using the bot:"
             }
             
             await message.answer(
                 text.get(language, "en"),
-                reply_markup=get_main_menu_keyboard(language, is_premium)
+                reply_markup=get_plans_keyboard(language, balance, test_used, is_tg_premium)
             )
-            await state.set_state(Registration.main_menu)
+            # Clear state so security router picks up web_app_data
+            await state.clear() 
             logger.info(f"Registration completed for user {user_id}")
         else:
             await message.answer("❌ Failed to save phone number.")

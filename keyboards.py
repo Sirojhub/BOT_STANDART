@@ -99,10 +99,38 @@ def get_main_menu_keyboard(language="en", is_premium=False):
 def get_back_keyboard(language="en"):
     btn_back = {
         "uz": "⬅️ Ortga",
-        "ru": "⬅️ Назад",
         "en": "⬅️ Back"
     }
     keyboard = ReplyKeyboardMarkup(keyboard=[
         [KeyboardButton(text=btn_back.get(language, "en"))]
+    ], resize_keyboard=True)
+    return keyboard
+
+def get_plans_keyboard(language="en", balance=0, test_used="false", is_tg_premium="false"):
+    """
+    Returns keyboard with a button to open Plans Web App.
+    """
+    btn_text = {
+        "uz": "💎 Tarifni Tanlash",
+        "ru": "💎 Выбрать Тариф",
+        "en": "💎 Choose Plan"
+    }
+
+    # Construct dynamic URL
+    base_url = WEBAPP_URL if WEBAPP_URL else "https://sirojhub.github.io/BOT_STANDART/webapp"
+    
+    # Logic to ensure we point to the correct file
+    if "plans.html" not in base_url:
+        if base_url.endswith("/"):
+            base_url += "plans.html"
+        else:
+            base_url += "/plans.html"
+
+    timestamp = int(time.time())
+    
+    url = f"{base_url}?lang={language}&balance={balance}&test_used={test_used}&tg_premium={is_tg_premium}&v={timestamp}"
+    
+    keyboard = ReplyKeyboardMarkup(keyboard=[
+        [KeyboardButton(text=btn_text.get(language, "en"), web_app=WebAppInfo(url=url))]
     ], resize_keyboard=True)
     return keyboard
