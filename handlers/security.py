@@ -264,6 +264,10 @@ async def process_buy_plan(message: types.Message):
                 await message.answer("❌ Xatolik yuz berdi.")
                 return
 
+            # Fetch user language for consistent UI
+            user_info = await get_user(user_id)
+            language = user_info[8] if user_info else "en"  # user_info[8] is language column
+
             balance = stats['balance']
             
             if plan == "test":
@@ -271,14 +275,22 @@ async def process_buy_plan(message: types.Message):
                     await message.answer("⚠️ Siz allaqachon bepul sinov davridan foydalangansiz.")
                 else:
                     await set_test_used(user_id)
-                    await message.answer("✅ <b>TABRIKLAYMIZ!</b>\n\nSizning 24 soatlik sinov davringiz faollashtirildi. Barcha cheklovlar olib tashlandi.", parse_mode="HTML")
+                    await message.answer(
+                        "✅ <b>TABRIKLAYMIZ!</b>\n\nSizning 24 soatlik sinov davringiz faollashtirildi. Barcha cheklovlar olib tashlandi.", 
+                        parse_mode="HTML",
+                        reply_markup=get_main_menu_keyboard(language, is_premium=True)
+                    )
 
             elif plan == "standard":
                 price = 8000
                 if balance >= price:
                     await update_referral_balance(user_id, -price)
                     await activate_premium(user_id)
-                    await message.answer("✅ <b>STANDART TARIF FAOLLASHTIRILDI!</b>\n\nSizning hisobingizdan 8000 so'm yechildi.\nHozircha himoya to'liq ishga tushdi.", parse_mode="HTML")
+                    await message.answer(
+                        "✅ <b>STANDART TARIF FAOLLASHTIRILDI!</b>\n\nSizning hisobingizdan 8000 so'm yechildi.\nHozircha himoya to'liq ishga tushdi.", 
+                        parse_mode="HTML",
+                        reply_markup=get_main_menu_keyboard(language, is_premium=True)
+                    )
                 else:
                     await message.answer(f"❌ <b>Hisobda mablag' yetarli emas.</b>\n\nSizning balansingiz: {balance} so'm.\nKerak: {price} so'm.\n\nDo'stlaringizni taklif qilib hisobni to'ldiring!", parse_mode="HTML")
 
@@ -291,7 +303,11 @@ async def process_buy_plan(message: types.Message):
                 if balance >= price:
                     await update_referral_balance(user_id, -price)
                     await activate_premium(user_id)
-                    await message.answer("✅ <b>PREMIUM TARIF FAOLLASHTIRILDI!</b>\n\nSiz 'Elite' maqomiga ega bo'ldingiz.\n24/7 Monitoring ishga tushdi.", parse_mode="HTML")
+                    await message.answer(
+                        "✅ <b>PREMIUM TARIF FAOLLASHTIRILDI!</b>\n\nSiz 'Elite' maqomiga ega bo'ldingiz.\n24/7 Monitoring ishga tushdi.", 
+                        parse_mode="HTML",
+                        reply_markup=get_main_menu_keyboard(language, is_premium=True)
+                    )
                 else:
                     await message.answer(f"❌ <b>Hisobda mablag' yetarli emas.</b>\n\nSizning balansingiz: {balance} so'm.\nKerak: {price} so'm.\n\nDo'stlaringizni taklif qilib hisobni to'ldiring!", parse_mode="HTML")
     except Exception as e:
