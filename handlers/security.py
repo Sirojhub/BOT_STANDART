@@ -260,7 +260,7 @@ async def nav_protection_app(message: types.Message):
         
         # If user is Standard/Premium (Paid) or Not Premium
         await message.answer(
-            "🛡 <b>GVARD Premium</b>\n\n"
+            "🛡 <b>SARHAD Premium</b>\n\n"
             "Tarif rejasini tanlash va himoyani kuchaytirish uchun quyidagi tugmani bosing:\n"
             "Нажмите кнопку ниже, чтобы выбрать тариф и усилить защиту:\n\n"
             "⬇️ <b>Pastdagi tugmani bosing:</b>",
