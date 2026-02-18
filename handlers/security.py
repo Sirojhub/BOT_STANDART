@@ -299,33 +299,50 @@ async def process_buy_plan(message: types.Message):
 
             elif plan == "standard":
                 price = 8000
-                if balance >= price:
-                    await update_referral_balance(user_id, -price)
-                    await activate_premium(user_id)
-                    await message.answer(
-                        "✅ <b>STANDART TARIF FAOLLASHTIRILDI!</b>\n\nSizning hisobingizdan 8000 so'm yechildi.\nHozircha himoya to'liq ishga tushdi.", 
-                        parse_mode="HTML",
-                        reply_markup=get_main_menu_keyboard(language, is_premium=True)
-                    )
-                else:
-                    await message.answer(f"❌ <b>Hisobda mablag' yetarli emas.</b>\n\nSizning balansingiz: {balance} so'm.\nKerak: {price} so'm.\n\nDo'stlaringizni taklif qilib hisobni to'ldiring!", parse_mode="HTML")
+                # Manual Payment Flow
+                card_number = "0000 0000 0000 0000"
+                admin_contact = "@admin"
+                
+                await message.answer(
+                    f"💳 <b>To'lov uchun rekvizitlar:</b>\n\n"
+                    f"🔢 Karta: <code>{card_number}</code>\n"
+                    f"💰 Narxi: <b>{price} so'm</b>\n\n"
+                    f"❗️ To'lovni amalga oshirgandan so'ng, chekni (skrinshot) administratorga yuboring:\n"
+                    f"👤 Admin: {admin_contact}\n\n"
+                    f"⏳ <i>To'lov tasdiqlangach, tarifingiz faollashtiriladi.</i>\n\n"
+                    f"💳 <b>Реквизиты для оплаты:</b>\n\n"
+                    f"🔢 Карта: <code>{card_number}</code>\n"
+                    f"💰 Цена: <b>{price} сум</b>\n\n"
+                    f"❗️ После оплаты отправьте чек (скриншот) администратору:\n"
+                    f"👤 Админ: {admin_contact}",
+                    parse_mode="HTML"
+                )
 
             elif plan == "premium":
                 price = 20000
+                # Check TG Premium requirement
                 if not message.from_user.is_premium:
                      await message.answer("🔒 Bu tarif faqat Telegram Premium egalari uchun.")
                      return
                      
-                if balance >= price:
-                    await update_referral_balance(user_id, -price)
-                    await activate_premium(user_id)
-                    await message.answer(
-                        "✅ <b>PREMIUM TARIF FAOLLASHTIRILDI!</b>\n\nSiz 'Elite' maqomiga ega bo'ldingiz.\n24/7 Monitoring ishga tushdi.", 
-                        parse_mode="HTML",
-                        reply_markup=get_main_menu_keyboard(language, is_premium=True)
-                    )
-                else:
-                    await message.answer(f"❌ <b>Hisobda mablag' yetarli emas.</b>\n\nSizning balansingiz: {balance} so'm.\nKerak: {price} so'm.\n\nDo'stlaringizni taklif qilib hisobni to'ldiring!", parse_mode="HTML")
+                # Manual Payment Flow
+                card_number = "0000 0000 0000 0000"
+                admin_contact = "@admin"
+                
+                await message.answer(
+                    f"💳 <b>To'lov uchun rekvizitlar (Premium):</b>\n\n"
+                    f"🔢 Karta: <code>{card_number}</code>\n"
+                    f"💰 Narxi: <b>{price} so'm</b>\n\n"
+                    f"❗️ To'lovni amalga oshirgandan so'ng, chekni (skrinshot) administratorga yuboring:\n"
+                    f"👤 Admin: {admin_contact}\n\n"
+                    f"⏳ <i>To'lov tasdiqlangach, tarifingiz faollashtiriladi.</i>\n\n"
+                    f"💳 <b>Реквизиты для оплаты (Premium):</b>\n\n"
+                    f"🔢 Карта: <code>{card_number}</code>\n"
+                    f"💰 Цена: <b>{price} сум</b>\n\n"
+                    f"❗️ После оплаты отправьте чек (скриншот) администратору:\n"
+                    f"👤 Админ: {admin_contact}",
+                    parse_mode="HTML"
+                )
     except Exception as e:
         logger.error(f"WebApp data error: {e}")
         await message.answer("⚠️ Xatolik yuz berdi.")
