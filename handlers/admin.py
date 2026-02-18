@@ -3,7 +3,7 @@ from aiogram.filters import Command
 from aiogram.types import WebAppInfo
 from database import (
     get_admin_statistics, get_users_paginated, toggle_user_premium, 
-    ban_user, get_all_user_ids, get_ad_text, update_ad_text
+    ban_user, get_all_user_ids, get_ad_text, update_ad_text, get_user
 )
 from config import BOT_TOKEN, ADMIN_WEBAPP_URL, ADMIN_MSG_ID
 import json
@@ -101,10 +101,31 @@ async def cmd_approve(message: types.Message):
         target_user_id = int(args[1])
         
         # Activate Premium & Handle Referral Reward
-        from database import activate_premium
+        target_user_id = int(args[1])
+        
+        # Activate Premium & Handle Referral Reward
+        from database import activate_premium, get_user
         await activate_premium(target_user_id)
         
-        await message.answer(f"✅ User {target_user_id} activated! Referral bonus applied if applicable.")
+        # Get referrer info for display
+        user = await get_user(target_user_id)
+        referrer_info = "Yo'q"
+        if user and len(user) > 17 and user[17]:
+             referrer_id = user[17]
+             try:
+                 referrer = await get_user(referrer_id)
+                 referrer_name = referrer[2] if referrer and len(referrer) > 2 else "Noma'lum"
+                 referrer_info = f"{referrer_name} (ID: {referrer_id})"
+             except:
+                 referrer_info = f"ID: {referrer_id}"
+
+        await message.answer(
+            f"✅ <b>Foydalanuvchi Faollashtirildi!</b>\n"
+            f"👤 User ID: <code>{target_user_id}</code>\n"
+            f"🤝 <b>Referal (Kim chaqirgan):</b> {referrer_info}\n\n"
+            f"Agar referal bo'lsa, unga bonus yozildi.",
+            parse_mode="HTML"
+        )
         
         # Notify User
         try:
