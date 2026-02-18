@@ -81,6 +81,12 @@ def get_main_menu_keyboard(language="en", is_premium=False):
         "en": "🛡 Protection (Coming Soon)"
     }
     
+    btn_invite = {
+        "uz": "👥 Do'stlarni taklif qilish",
+        "ru": "👥 Пригласить друзей",
+        "en": "👥 Invite Friends"
+    }
+    
     rows = [
         [KeyboardButton(text=btn_link.get(language, "en")), KeyboardButton(text=btn_file.get(language, "en"))]
     ]
@@ -92,6 +98,9 @@ def get_main_menu_keyboard(language="en", is_premium=False):
     else:
         # Regular users get the "Coming Soon" app button
         rows.append([KeyboardButton(text=btn_app_regular.get(language, "en"))])
+    
+    # Add Invite button for everyone
+    rows.append([KeyboardButton(text=btn_invite.get(language, "en"))])
     
     keyboard = ReplyKeyboardMarkup(keyboard=rows, resize_keyboard=True)
     return keyboard

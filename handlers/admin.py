@@ -82,7 +82,47 @@ async def cmd_admin(message: types.Message):
     markup = types.InlineKeyboardMarkup(inline_keyboard=[
         [types.InlineKeyboardButton(text="🛠 Open Admin Panel", web_app=WebAppInfo(url=ADMIN_WEBAPP_URL))]
     ])
+    markup = types.InlineKeyboardMarkup(inline_keyboard=[
+        [types.InlineKeyboardButton(text="🛠 Open Admin Panel", web_app=WebAppInfo(url=ADMIN_WEBAPP_URL))]
+    ])
     await message.answer("🔒 Admin Panelga xush kelibsiz.", reply_markup=markup)
+
+@router.message(Command("approve"))
+async def cmd_approve(message: types.Message):
+    if message.from_user.id not in ADMIN_IDS:
+        return
+
+    try:
+        args = message.text.split()
+        if len(args) != 2:
+            await message.answer("⚠️ Format: `/approve user_id`")
+            return
+        
+        target_user_id = int(args[1])
+        
+        # Activate Premium & Handle Referral Reward
+        from database import activate_premium
+        await activate_premium(target_user_id)
+        
+        await message.answer(f"✅ User {target_user_id} activated! Referral bonus applied if applicable.")
+        
+        # Notify User
+        try:
+            await message.bot.send_message(
+                target_user_id,
+                "✅ <b>Tabriklaymiz! Sizning to'lovingiz tasdiqlandi.</b>\n\n"
+                "Premium akkaunt faollashtirildi. Barcha cheklovlar olib tashlandi.\n"
+                "Admin bilan bog'lanish: @GvardAdmin",
+                parse_mode="HTML"
+            )
+        except Exception:
+            await message.answer(f"⚠️ User {target_user_id} did not receive notification (blocked bot?)")
+            
+    except ValueError:
+        await message.answer("⚠️ Invalid User ID.")
+    except Exception as e:
+        logger.error(f"Approval error: {e}")
+        await message.answer("⚠️ Error occurred.")
 
 # --- API Endpoints ---
 async def api_stats(request):

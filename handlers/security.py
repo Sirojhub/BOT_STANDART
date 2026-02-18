@@ -351,6 +351,25 @@ async def process_buy_plan(message: types.Message):
         logger.error(f"WebApp data error: {e}")
         await message.answer("⚠️ Xatolik yuz berdi.")
 
+@router.message(F.text.in_({"👥 Do'stlarni taklif qilish", "👥 Пригласить друзей", "👥 Invite Friends"}))
+async def nav_invite(message: types.Message):
+    user_id = message.from_user.id
+    # Using hardcoded bot username for now, or could fetch via bot.get_me() if bound
+    bot_username = "GVARD_bot" 
+    referral_link = f"https://t.me/{bot_username}?start={user_id}"
+    
+    await message.answer(
+        f"👥 <b>Do'stlarni Taklif Qilish</b>\n\n"
+        f"Sizning shaxsiy taklif havolangiz:\n"
+        f"🔗 <code>{referral_link}</code>\n\n"
+        f"Do'stingiz shu havola orqali kirib, Premium xarid qilsa, sizga <b>1000 so'm</b> bonus beriladi!\n\n"
+        f"👥 <b>Пригласить Друзей</b>\n\n"
+        f"Ваша личная реферальная ссылка:\n"
+        f"🔗 <code>{referral_link}</code>\n\n"
+        f"Если друг перейдет по ссылке и купит Premium, вы получите <b>1000 сум</b> бонуса!",
+        parse_mode="HTML"
+    )
+
 @router.message(F.text.in_({"✨ 24/7 Monitoring", "✨ 24/7 Мониторинг"}))
 async def nav_monitoring(message: types.Message):
     user_id = message.from_user.id
