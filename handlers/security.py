@@ -354,8 +354,10 @@ async def process_buy_plan(message: types.Message):
 @router.message(F.text.in_({"👥 Do'stlarni taklif qilish", "👥 Пригласить друзей", "👥 Invite Friends"}))
 async def nav_invite(message: types.Message):
     user_id = message.from_user.id
-    # Using hardcoded bot username for now, or could fetch via bot.get_me() if bound
-    bot_username = "GVARD_bot" 
+    user_id = message.from_user.id
+    # Fetch bot username dynamically
+    bot_user = await message.bot.get_me()
+    bot_username = bot_user.username
     referral_link = f"https://t.me/{bot_username}?start={user_id}"
     
     await message.answer(
