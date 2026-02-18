@@ -1,5 +1,5 @@
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardMarkup, KeyboardButton, WebAppInfo
-from config import WEBAPP_URL
+from config import WEBAPP_URL, PLANS_WEBAPP_URL
 import time
 
 def get_language_keyboard():
@@ -117,14 +117,8 @@ def get_plans_keyboard(language="en", balance=0, test_used="false", is_tg_premiu
     }
 
     # Construct dynamic URL
-    base_url = WEBAPP_URL if WEBAPP_URL else "https://sirojhub.github.io/BOT_STANDART/webapp"
-    
-    # Logic to ensure we point to the correct file
-    if "plans.html" not in base_url:
-        if base_url.endswith("/"):
-            base_url += "plans.html"
-        else:
-            base_url += "/plans.html"
+    # Use explicit PLANS_WEBAPP_URL
+    base_url = PLANS_WEBAPP_URL if PLANS_WEBAPP_URL else "https://sirojhub.github.io/BOT_STANDART/webapp/plans.html"
 
     timestamp = int(time.time())
     

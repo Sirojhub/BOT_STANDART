@@ -23,6 +23,7 @@ if RENDER_URL and not RENDER_URL.startswith("http"):
 
 WEBAPP_URL = os.getenv("WEBAPP_URL", RENDER_URL)
 ADMIN_WEBAPP_URL = os.getenv("ADMIN_WEBAPP_URL", RENDER_URL)
+PLANS_WEBAPP_URL = os.getenv("PLANS_WEBAPP_URL", RENDER_URL)
 
 # Admin IDs (New)
 ADMIN_MSG_ID = os.getenv("ADMIN_ID", "1052080030") # Default fallback or empty
