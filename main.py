@@ -14,6 +14,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from config import BOT_TOKEN 
 from handlers import onboarding, security, start, admin
 from database import create_users_table, get_db_path, reset_daily_stats
+from utils.middleware import ThrottlingMiddleware
 
 # Configure Logging
 logging.basicConfig(level=logging.INFO, stream=sys.stdout)
@@ -76,6 +77,10 @@ async def main():
     # 1. Initialize Bot & Dispatcher
     bot = Bot(token=BOT_TOKEN)
     dp = Dispatcher(storage=MemoryStorage())
+
+    # --- Middleware Registration ---
+    dp.message.middleware(ThrottlingMiddleware())
+    dp.callback_query.middleware(ThrottlingMiddleware())
 
     # 2. Setup Routers
     dp.include_router(admin.router)
