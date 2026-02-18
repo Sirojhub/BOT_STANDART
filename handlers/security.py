@@ -12,7 +12,7 @@ import asyncio
 import re
 import logging
 import json
-from aiogram.types import WebAppInfo, InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.types import WebAppInfo, InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardMarkup, KeyboardButton
 from database import (
     get_user_pricing_info, 
     update_referral_balance, 
@@ -237,9 +237,11 @@ async def nav_protection_app(message: types.Message):
         base_url = PLANS_WEBAPP_URL if PLANS_WEBAPP_URL else f"{WEBAPP_URL}/plans.html"
         url = f"{base_url}?lang={message.from_user.language_code}&balance={balance}&test_used={test_used}&tg_premium={is_tg_premium}"
         
-        keyboard = InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text="💎 Upgrade Plan / Tarifni Kuchaytirish", web_app=WebAppInfo(url=url))]
-        ])
+        # Use ReplyKeyboardMarkup because InlineWebApps cannot send data back to the bot via sendData
+        keyboard = ReplyKeyboardMarkup(keyboard=[
+            [KeyboardButton(text="💎 Upgrade Plan / Tarifni Kuchaytirish", web_app=WebAppInfo(url=url))],
+            [KeyboardButton(text="⬅️ Ortga")]
+        ], resize_keyboard=True)
 
         # If user is on TEST PLAN (test_used=True and is_premium=True), show Upgrade Prompt
         # Note: We assume is_premium=True if test is active. 
@@ -249,7 +251,8 @@ async def nav_protection_app(message: types.Message):
                 "Siz hozir <b>Test Tarifidasiz</b>. Bu funksiya faqat to'liq versiyada ishlaydi.\n"
                 "Ilovani yuklab olish va aktivatsiya kodi olish uchun <b>Standart</b> yoki <b>Premium</b> tarifga o'ting.\n\n"
                 "Вы находитесь на <b>Тестовом Тарифе</b>. Эта функция доступна только в полной версии.\n"
-                "Перейдите на <b>Стандарт</b> или <b>Премиум</b>, чтобы получить приложение и код активации.",
+                "Перейдите на <b>Стандарт</b> или <b>Премиум</b>, чтобы получить приложение и код активации.\n\n"
+                "⬇️ <b>Pastdagi tugmani bosing:</b>",
                 reply_markup=keyboard,
                 parse_mode="HTML"
             )
@@ -259,7 +262,8 @@ async def nav_protection_app(message: types.Message):
         await message.answer(
             "🛡 <b>GVARD Premium</b>\n\n"
             "Tarif rejasini tanlash va himoyani kuchaytirish uchun quyidagi tugmani bosing:\n"
-            "Нажмите кнопку ниже, чтобы выбрать тариф и усилить защиту:",
+            "Нажмите кнопку ниже, чтобы выбрать тариф и усилить защиту:\n\n"
+            "⬇️ <b>Pastdagi tugmani bosing:</b>",
             reply_markup=keyboard,
             parse_mode="HTML"
         )
@@ -361,9 +365,11 @@ async def nav_monitoring(message: types.Message):
         base_url = PLANS_WEBAPP_URL if PLANS_WEBAPP_URL else f"{WEBAPP_URL}/plans.html"
         url = f"{base_url}?lang={message.from_user.language_code}&balance={balance}&test_used={test_used}&tg_premium={is_tg_premium}"
         
-        keyboard = InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text="💎 Upgrade Plan / Tarifni Kuchaytirish", web_app=WebAppInfo(url=url))]
-        ])
+        # Use ReplyKeyboardMarkup
+        keyboard = ReplyKeyboardMarkup(keyboard=[
+            [KeyboardButton(text="💎 Upgrade Plan / Tarifni Kuchaytirish", web_app=WebAppInfo(url=url))],
+            [KeyboardButton(text="⬅️ Ortga")]
+        ], resize_keyboard=True)
         
         await message.answer(
             "🚫 <b>Ruxsat cheklangan</b>\n\n"
@@ -371,7 +377,8 @@ async def nav_monitoring(message: types.Message):
             "To'liq himoya uchun <b>Standart</b> yoki <b>Premium</b> tarifni tanlang.\n\n"
             "🚫 <b>Доступ ограничен</b>\n"
             "Функция 24/7 Мониторинга не работает в <b>Тестовом Тарифе</b>.\n"
-            "Выберите <b>Стандарт</b> или <b>Премиум</b> для полной защиты.",
+            "Выберите <b>Стандарт</b> или <b>Премиум</b> для полной защиты.\n\n"
+            "⬇️ <b>Pastdagi tugmani bosing:</b>",
             reply_markup=keyboard,
             parse_mode="HTML"
         )
