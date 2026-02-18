@@ -17,6 +17,7 @@ async def cmd_start(message: types.Message, state: FSMContext):
     Handles Referral Deep Links.
     """
     user_id = message.from_user.id
+    valid_referrer_id = None
     
     # Check for referral args
     command_args = message.text.split()
@@ -25,8 +26,7 @@ async def cmd_start(message: types.Message, state: FSMContext):
             referrer_id = int(command_args[1])
             # Prevent self-referral
             if referrer_id != user_id:
-                # Store in state temporarily, will be saved to DB during registration
-                await state.update_data(referrer_id=referrer_id)
+                valid_referrer_id = referrer_id
                 logger.info(f"User {user_id} referred by {referrer_id}")
         except ValueError:
             pass
@@ -56,6 +56,11 @@ async def cmd_start(message: types.Message, state: FSMContext):
 
     # New or incomplete user -> Start Onboarding
     await state.clear()
+    
+    # Re-apply referral if valid
+    if valid_referrer_id:
+        await state.update_data(referrer_id=valid_referrer_id)
+        
     await message.answer(
         "👋 Xush kelibsiz! Iltimos, tilni tanlang:\n"
         "Добро пожаловать! Пожалуйста, выберите язык:\n"
