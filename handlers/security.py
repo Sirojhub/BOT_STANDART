@@ -237,9 +237,24 @@ async def nav_protection_app(message: types.Message):
         url = f"{WEBAPP_URL}/plans.html?lang={message.from_user.language_code}&balance={balance}&test_used={test_used}&tg_premium={is_tg_premium}"
         
         keyboard = InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text="📱 Open Plans / Tariflar", web_app=WebAppInfo(url=url))]
+            [InlineKeyboardButton(text="💎 Upgrade Plan / Tarifni Kuchaytirish", web_app=WebAppInfo(url=url))]
         ])
+
+        # If user is on TEST PLAN (test_used=True and is_premium=True), show Upgrade Prompt
+        # Note: We assume is_premium=True if test is active. 
+        if stats['test_used'] and stats['is_premium']:
+             await message.answer(
+                "🔒 <b>Himoya Ilovasi (Pro)</b>\n\n"
+                "Siz hozir <b>Test Tarifidasiz</b>. Bu funksiya faqat to'liq versiyada ishlaydi.\n"
+                "Ilovani yuklab olish va aktivatsiya kodi olish uchun <b>Standart</b> yoki <b>Premium</b> tarifga o'ting.\n\n"
+                "Вы находитесь на <b>Тестовом Тарифе</b>. Эта функция доступна только в полной версии.\n"
+                "Перейдите на <b>Стандарт</b> или <b>Премиум</b>, чтобы получить приложение и код активации.",
+                reply_markup=keyboard,
+                parse_mode="HTML"
+            )
+             return
         
+        # If user is Standard/Premium (Paid) or Not Premium
         await message.answer(
             "🛡 <b>GVARD Premium</b>\n\n"
             "Tarif rejasini tanlash va himoyani kuchaytirish uchun quyidagi tugmani bosing:\n"
@@ -316,6 +331,33 @@ async def process_buy_plan(message: types.Message):
 
 @router.message(F.text.in_({"✨ 24/7 Monitoring", "✨ 24/7 Мониторинг"}))
 async def nav_monitoring(message: types.Message):
+    user_id = message.from_user.id
+    stats = await get_user_pricing_info(user_id)
+
+    if stats and stats['test_used'] and stats['is_premium']:
+        # User is on Test Plan -> Restrict Access
+        balance = stats['balance']
+        test_used = str(stats['test_used']).lower()
+        is_tg_premium = str(message.from_user.is_premium or False).lower()
+        
+        url = f"{WEBAPP_URL}/plans.html?lang={message.from_user.language_code}&balance={balance}&test_used={test_used}&tg_premium={is_tg_premium}"
+        
+        keyboard = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="💎 Upgrade Plan / Tarifni Kuchaytirish", web_app=WebAppInfo(url=url))]
+        ])
+        
+        await message.answer(
+            "🚫 <b>Ruxsat cheklangan</b>\n\n"
+            "24/7 Monitoring funksiyasi <b>Test Tarifida</b> ishlamaydi.\n"
+            "To'liq himoya uchun <b>Standart</b> yoki <b>Premium</b> tarifni tanlang.\n\n"
+            "🚫 <b>Доступ ограничен</b>\n"
+            "Функция 24/7 Мониторинга не работает в <b>Тестовом Тарифе</b>.\n"
+            "Выберите <b>Стандарт</b> или <b>Премиум</b> для полной защиты.",
+            reply_markup=keyboard,
+            parse_mode="HTML"
+        )
+        return
+
     await message.answer("✅ 24/7 Monitoring is active for your Premium account.")
 
 @router.message(F.text.in_({"⬅️ Ortga", "⬅️ Назад", "⬅️ Back"}))
