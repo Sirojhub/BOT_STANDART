@@ -54,9 +54,15 @@ class ThrottlingMiddleware(BaseMiddleware):
             # Notify user
             try:
                 if isinstance(event, Message):
-                    await event.answer(f"⚠️ <b>Juda tez harakat qilyapsiz!</b>\n\nBot serveriga yuklama tushmasligi uchun siz <b>{int(self.penalty_duration)} soniyaga</b> bloklandingiz.", parse_mode="HTML")
+                    await event.answer(
+                        f"⚠️ <b>Juda tez harakat qilyapsiz!</b>\n\n"
+                        f"Bot va Serverga ortiqcha yuklama tushmasligi uchun himoya tizimi ishga tushdi.\n"
+                        f"<i>Sababi: 1 soniya ichida 3 martadan ko'p urinish.</i>\n\n"
+                        f"⏳ <b>Iltimos, {int(self.penalty_duration)} soniya kuting...</b>", 
+                        parse_mode="HTML"
+                    )
                 elif isinstance(event, CallbackQuery):
-                    await event.answer(f"⚠️ Juda tez! {int(self.penalty_duration)} soniya kuting.", show_alert=True)
+                    await event.answer(f"⚠️ Juda tez harakat qilyapsiz! {int(self.penalty_duration)} soniya kuting.", show_alert=True)
             except:
                 pass
             return
