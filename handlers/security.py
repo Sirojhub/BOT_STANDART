@@ -20,7 +20,7 @@ from database import (
     set_test_used,
     get_user
 )
-from config import WEBAPP_URL
+from config import WEBAPP_URL, PLANS_WEBAPP_URL
 
 router = Router()
 logger = logging.getLogger(__name__)
@@ -234,7 +234,8 @@ async def nav_protection_app(message: types.Message):
         is_tg_premium = str(message.from_user.is_premium or False).lower()
         
         # Build URL with params
-        url = f"{WEBAPP_URL}/plans.html?lang={message.from_user.language_code}&balance={balance}&test_used={test_used}&tg_premium={is_tg_premium}"
+        base_url = PLANS_WEBAPP_URL if PLANS_WEBAPP_URL else f"{WEBAPP_URL}/plans.html"
+        url = f"{base_url}?lang={message.from_user.language_code}&balance={balance}&test_used={test_used}&tg_premium={is_tg_premium}"
         
         keyboard = InlineKeyboardMarkup(inline_keyboard=[
             [InlineKeyboardButton(text="💎 Upgrade Plan / Tarifni Kuchaytirish", web_app=WebAppInfo(url=url))]
@@ -340,7 +341,8 @@ async def nav_monitoring(message: types.Message):
         test_used = str(stats['test_used']).lower()
         is_tg_premium = str(message.from_user.is_premium or False).lower()
         
-        url = f"{WEBAPP_URL}/plans.html?lang={message.from_user.language_code}&balance={balance}&test_used={test_used}&tg_premium={is_tg_premium}"
+        base_url = PLANS_WEBAPP_URL if PLANS_WEBAPP_URL else f"{WEBAPP_URL}/plans.html"
+        url = f"{base_url}?lang={message.from_user.language_code}&balance={balance}&test_used={test_used}&tg_premium={is_tg_premium}"
         
         keyboard = InlineKeyboardMarkup(inline_keyboard=[
             [InlineKeyboardButton(text="💎 Upgrade Plan / Tarifni Kuchaytirish", web_app=WebAppInfo(url=url))]
