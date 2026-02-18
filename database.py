@@ -312,10 +312,11 @@ async def get_users_paginated(page: int = 1, search: str = "", limit: int = 20) 
         users = []
         async with db.execute(
             """
-            SELECT user_id, full_name, region, is_premium, is_banned 
-            FROM users 
-            WHERE full_name LIKE ? OR username LIKE ? OR CAST(user_id AS TEXT) LIKE ?
-            ORDER BY user_id DESC 
+            SELECT u.user_id, u.full_name, u.region, u.is_premium, u.is_banned, r.full_name, u.referrer_id
+            FROM users u
+            LEFT JOIN users r ON u.referrer_id = r.user_id
+            WHERE u.full_name LIKE ? OR u.username LIKE ? OR CAST(u.user_id AS TEXT) LIKE ?
+            ORDER BY u.user_id DESC 
             LIMIT ? OFFSET ?
             """,
             (search_query, search_query, search_query, limit, offset)
@@ -326,7 +327,9 @@ async def get_users_paginated(page: int = 1, search: str = "", limit: int = 20) 
                     'full_name': row[1] or "No Name",
                     'region': row[2] or "Unknown",
                     'is_premium': bool(row[3]),
-                    'is_banned': bool(row[4])
+                    'is_banned': bool(row[4]),
+                    'referrer_name': row[5], # Can be None
+                    'referrer_id': row[6]    # Can be None
                 })
                 
         return {
