@@ -54,20 +54,20 @@ async def cmd_start(message: types.Message, state: FSMContext):
             )
             return
 
-    # Welcome screen from drawing
+    # Professional Welcome Message (Balanced with original feel)
     welcome_text = (
-        "<b>[ SARHAD KIBERXAVFSIZLIK TIZIMI ]</b>\n\n"
-        "● <b>HOLAT:</b> TIZIM FAOL\n"
-        "● <b>VERSIYA:</b> 1.15.5-BARQAROR\n"
-        "■ <b>NAZORAT:</b> SARHAD MONITORING MARKAZI\n\n"
-        "<b>TIZIMNING ASOSIY VAZIFALARI:</b>\n"
-        "> HAVOLALARNI TEKSHIRISH: ShubhalI sayt manzillarini tahlil qilish.\n"
-        "> FAYLLARNI SKANERLASH: Virus va zararli dasturlarni aniqlash.\n"
-        "> ILOVA NAZORATI: Zararli fayllarni ochishdan oldin avtomatik skanerlash.\n"
-        "> DOIMIY HIMOYA: Premium foydalanuvchilar uchun 24/7 nazorat.\n\n"
-        "<b>FOYDALANUVCHI DIQQATIGA:</b>\n"
-        "Xavfsizlik tekshiruvini boshlash va tizimga kirish uchun pastdagi tilni tanlang.\n\n"
-        "<i>ESLATMA: BARCHA AMALLAR XAVFSIZLIK YUZASIDAN QAYD ETIB BORILADI. RUXSATSIZ HARAKATLAR CHEKLANADI.</i>"
+        "👋 <b>Xush kelibsiz!</b>\n\n"
+        "📊 <b>TIZIM HOLATI:</b>\n"
+        "● <b>HOLAT:</b> FAOL\n"
+        "● <b>VERSIYA:</b> 1.15.5-Stable\n"
+        "■ <b>NAZORAT:</b> MONITORING MARKAZI\n\n"
+        "<b>BOTNING ASOSIY VAZIFALARI:</b>\n"
+        "🛡 Havolalarni tekshirish\n"
+        "📂 Fayllarni skanerlash\n"
+        "✨ 24/7 Monitoring\n\n"
+        "Iltimos, davom etish uchun tilni tanlang:\n"
+        "Пожалуйста, выберите язык для продолжения:\n"
+        "Please select a language to continue:"
     )
 
     # New or incomplete user -> Start Onboarding

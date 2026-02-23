@@ -48,17 +48,14 @@ async def process_language(message: types.Message, state: FSMContext):
     )
 
     text = {
-        "uz": "✅ Ro'yxatdan o'tish yakunlandi! Siz himoyalangan tizimga kirdingiz.",
-        "ru": "✅ Регистрация завершена! Вы вошли в защищенную систему.",
-        "en": "✅ Registration complete! You have entered the secured system."
+        "uz": "Ro'yxatdan o'tish uchun quyidagi tugmani bosing:",
+        "ru": "Нажмите кнопку ниже для регистрации:",
+        "en": "Press the button below to register:"
     }
-    
-    # Determine if user is premium for the main menu keyboard
-    is_premium = message.from_user.is_premium or False
     
     await message.answer(
         text.get(lang_code, text["en"]),
-        reply_markup=get_main_menu_keyboard(lang_code, is_premium)
+        reply_markup=get_agreement_keyboard(lang_code)
     )
     await state.set_state(Registration.waiting_for_webapp)
 
