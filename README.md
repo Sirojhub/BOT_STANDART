@@ -1,4 +1,4 @@
-# GVARD Cybersecurity Bot
+# SARHAD Cybersecurity Bot
 
 A Telegram bot designed for cybersecurity tasks, featuring a Cyberpunk-themed onboarding flow, VirusTotal integration for link and file scanning, and a premium subscription model.
 

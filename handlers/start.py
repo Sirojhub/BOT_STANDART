@@ -41,7 +41,7 @@ async def cmd_start(message: types.Message, state: FSMContext):
     if user:
         # Check if banned
         if user['is_banned']:
-            await message.answer("⛔️ Sizning hisobingiz bloklangan.\n\nAdmin bilan bog'laning: @GvardAdmin")
+            await message.answer("⛔️ Sizning hisobingiz bloklangan.\n\nAdmin bilan bog'laning: @SarhadAdmin")
             return
 
         # Check registration complete
