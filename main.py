@@ -6,7 +6,7 @@ import sys
 import time
 from datetime import datetime
 import pytz
-from aiogram import Bot, Dispatcher
+from aiogram import Bot, Dispatcher, types
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiohttp import web
 import aiohttp
@@ -188,8 +188,14 @@ async def main():
 
 if __name__ == "__main__":
     if not BOT_TOKEN:
-        sys.exit("CRITICAL: BOT_TOKEN is not set.")
+        logger.error("❌ CRITICAL: BOT_TOKEN is not set. The bot cannot start.")
+        sys.exit(1)
+    
+    logger.info("🎬 Starting application startup sequence...")
     try:
         asyncio.run(main())
+    except Exception as e:
+        logger.critical(f"💥 Application crashed during startup: {e}", exc_info=True)
+        sys.exit(1)
     except (KeyboardInterrupt, SystemExit):
-        pass
+        logger.info("👋 Application stopped manually.")
