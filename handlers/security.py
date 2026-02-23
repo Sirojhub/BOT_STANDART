@@ -191,9 +191,8 @@ async def scan_file_virustotal(file_path: str):
 
 @router.message(F.text.in_({"🔗 Havolani tekshirish", "🔗 Проверка ссылки", "🔗 Link Check"}))
 async def nav_link_check(message: types.Message, state: FSMContext):
-    lang = "en"
-    if "Havolani" in message.text: lang = "uz"
-    elif "Проверка" in message.text: lang = "ru"
+    user = await get_user(message.from_user.id)
+    lang = user['language'] if user else "uz"
     
     responses = {
         "uz": "Havolani yuboring (http:// yoki https:// bilan):",
@@ -201,15 +200,13 @@ async def nav_link_check(message: types.Message, state: FSMContext):
         "en": "Please send the link (with http:// or https://):"
     }
     
-    await state.update_data(language=lang)
-    await message.answer(responses[lang], reply_markup=get_back_keyboard(lang))
+    await message.answer(responses.get(lang, responses["en"]), reply_markup=get_back_keyboard(lang))
     await state.set_state(SecurityStates.waiting_for_link)
 
 @router.message(F.text.in_({"📂 Faylni tekshirish", "📂 Проверка файла", "📂 File Check"}))
 async def nav_file_check(message: types.Message, state: FSMContext):
-    lang = "en"
-    if "Faylni" in message.text: lang = "uz"
-    elif "Проверка" in message.text: lang = "ru"
+    user = await get_user(message.from_user.id)
+    lang = user['language'] if user else "uz"
     
     responses = {
         "uz": "Tekshirish uchun faylni yuboring (max 20MB):",
@@ -217,8 +214,7 @@ async def nav_file_check(message: types.Message, state: FSMContext):
         "en": "Please send the file to check (max 20MB):"
     }
     
-    await state.update_data(language=lang)
-    await message.answer(responses[lang], reply_markup=get_back_keyboard(lang))
+    await message.answer(responses.get(lang, responses["en"]), reply_markup=get_back_keyboard(lang))
     await state.set_state(SecurityStates.waiting_for_file)
 
 @router.message(F.text.in_({"🛡 Himoya ilovasini faollashtirish", "🛡 Активировать защиту", "🛡 Activate Protection App", 
@@ -228,6 +224,8 @@ async def nav_protection_app(message: types.Message):
     stats = await get_user_pricing_info(user_id)
     
     if stats:
+        user_info = await get_user(user_id)
+        lang = user_info['language'] if user_info else "uz"
         balance = stats['balance']
         is_premium = str(stats['is_premium']).lower()
         test_used = str(stats['test_used']).lower()
@@ -235,12 +233,14 @@ async def nav_protection_app(message: types.Message):
         
         # Build URL with params
         base_url = PLANS_WEBAPP_URL if PLANS_WEBAPP_URL else f"{WEBAPP_URL}/plans.html"
-        url = f"{base_url}?lang={message.from_user.language_code}&balance={balance}&test_used={test_used}&tg_premium={is_tg_premium}"
+        url = f"{base_url}?lang={lang}&balance={balance}&test_used={test_used}&tg_premium={is_tg_premium}"
+        
+        btn_back = {"uz": "⬅️ Ortga", "ru": "⬅️ Назад", "en": "⬅️ Back"}
         
         # Use ReplyKeyboardMarkup because InlineWebApps cannot send data back to the bot via sendData
         keyboard = ReplyKeyboardMarkup(keyboard=[
             [KeyboardButton(text="💎 Upgrade Plan / Tarifni Kuchaytirish", web_app=WebAppInfo(url=url))],
-            [KeyboardButton(text="⬅️ Ortga")]
+            [KeyboardButton(text=btn_back.get(lang, "en"))]
         ], resize_keyboard=True)
 
         # If user is on TEST PLAN (test_used=True and is_premium=True), show Upgrade Prompt
@@ -354,23 +354,36 @@ async def process_buy_plan(message: types.Message):
 @router.message(F.text.in_({"👥 Do'stlarni taklif qilish", "👥 Пригласить друзей", "👥 Invite Friends"}))
 async def nav_invite(message: types.Message):
     user_id = message.from_user.id
-    user_id = message.from_user.id
+    user = await get_user(user_id)
+    lang = user['language'] if user else "uz"
+    
     # Fetch bot username dynamically
     bot_user = await message.bot.get_me()
     bot_username = bot_user.username
     referral_link = f"https://t.me/{bot_username}?start={user_id}"
     
-    await message.answer(
-        f"👥 <b>Do'stlarni Taklif Qilish</b>\n\n"
-        f"Sizning shaxsiy taklif havolangiz:\n"
-        f"🔗 <code>{referral_link}</code>\n\n"
-        f"Do'stingiz shu havola orqali kirib, Premium xarid qilsa, sizga <b>1000 so'm</b> bonus beriladi!\n\n"
-        f"👥 <b>Пригласить Друзей</b>\n\n"
-        f"Ваша личная реферальная ссылка:\n"
-        f"🔗 <code>{referral_link}</code>\n\n"
-        f"Если друг перейдет по ссылке и купит Premium, вы получите <b>1000 сум</b> бонуса!",
-        parse_mode="HTML"
-    )
+    responses = {
+        "uz": (
+            f"👥 <b>Do'stlarni Taklif Qilish</b>\n\n"
+            f"Sizning shaxsiy taklif havolangiz:\n"
+            f"🔗 <code>{referral_link}</code>\n\n"
+            f"Do'stingiz shu havola orqali kirib, Premium xarid qilsa, sizga <b>1000 so'm</b> bonus beriladi!"
+        ),
+        "ru": (
+            f"👥 <b>Пригласить Друзей</b>\n\n"
+            f"Ваша личная реферальная ссылка:\n"
+            f"🔗 <code>{referral_link}</code>\n\n"
+            f"Если друг перейдет по ссылке и купит Premium, вы получите <b>1000 сум</b> бонуса!"
+        ),
+        "en": (
+            f"👥 <b>Invite Friends</b>\n\n"
+            f"Your personal referral link:\n"
+            f"🔗 <code>{referral_link}</code>\n\n"
+            f"If a friend joins via this link and buys Premium, you will receive a <b>1,000 UZS</b> bonus!"
+        )
+    }
+    
+    await message.answer(responses.get(lang, responses["en"]), parse_mode="HTML")
 
 @router.message(F.text.in_({"✨ 24/7 Monitoring", "✨ 24/7 Мониторинг"}))
 async def nav_monitoring(message: types.Message):
@@ -379,27 +392,47 @@ async def nav_monitoring(message: types.Message):
 
     if stats and stats['test_used'] and stats['is_premium']:
         # User is on Test Plan -> Restrict Access
+        user_info = await get_user(user_id)
+        lang = user_info['language'] if user_info else "uz"
+        
         balance = stats['balance']
         test_used = str(stats['test_used']).lower()
         is_tg_premium = str(message.from_user.is_premium or False).lower()
         
         base_url = PLANS_WEBAPP_URL if PLANS_WEBAPP_URL else f"{WEBAPP_URL}/plans.html"
-        url = f"{base_url}?lang={message.from_user.language_code}&balance={balance}&test_used={test_used}&tg_premium={is_tg_premium}"
+        url = f"{base_url}?lang={lang}&balance={balance}&test_used={test_used}&tg_premium={is_tg_premium}"
+        
+        btn_back = {"uz": "⬅️ Ortga", "ru": "⬅️ Наzad", "en": "⬅️ Back"}
         
         # Use ReplyKeyboardMarkup
         keyboard = ReplyKeyboardMarkup(keyboard=[
             [KeyboardButton(text="💎 Upgrade Plan / Tarifni Kuchaytirish", web_app=WebAppInfo(url=url))],
-            [KeyboardButton(text="⬅️ Ortga")]
+            [KeyboardButton(text=btn_back.get(lang, "en"))]
         ], resize_keyboard=True)
         
+        text = {
+            "uz": (
+                "🚫 <b>Ruxsat cheklangan</b>\n\n"
+                "24/7 Monitoring funksiyasi <b>Test Tarifida</b> ishlamaydi.\n"
+                "To'liq himoya uchun <b>Standart</b> yoki <b>Premium</b> tarifni tanlang.\n\n"
+                "⬇️ <b>Pastdagi tugmani bosing:</b>"
+            ),
+            "ru": (
+                "🚫 <b>Доступ ограничен</b>\n\n"
+                "Функция 24/7 Мониторинга не работает в <b>Тестовом Тарифе</b>.\n"
+                "Выберите <b>Стандарт</b> или <b>Премиум</b> для полной защиты.\n\n"
+                "⬇️ <b>Нажмите кнопку ниже:</b>"
+            ),
+            "en": (
+                "🚫 <b>Access Restricted</b>\n\n"
+                "The 24/7 Monitoring feature is not available in the <b>Test Plan</b>.\n"
+                "Please choose a <b>Standard</b> or <b>Premium</b> plan for full protection.\n\n"
+                "⬇️ <b>Click the button below:</b>"
+            )
+        }
+        
         await message.answer(
-            "🚫 <b>Ruxsat cheklangan</b>\n\n"
-            "24/7 Monitoring funksiyasi <b>Test Tarifida</b> ishlamaydi.\n"
-            "To'liq himoya uchun <b>Standart</b> yoki <b>Premium</b> tarifni tanlang.\n\n"
-            "🚫 <b>Доступ ограничен</b>\n"
-            "Функция 24/7 Мониторинга не работает в <b>Тестовом Тарифе</b>.\n"
-            "Выберите <b>Стандарт</b> или <b>Премиум</b> для полной защиты.\n\n"
-            "⬇️ <b>Pastdagi tugmani bosing:</b>",
+            text.get(lang, text["en"]),
             reply_markup=keyboard,
             parse_mode="HTML"
         )
@@ -409,9 +442,9 @@ async def nav_monitoring(message: types.Message):
 
 @router.message(F.text.in_({"⬅️ Ortga", "⬅️ Назад", "⬅️ Back"}))
 async def nav_back(message: types.Message, state: FSMContext):
-    user_data = await state.get_data()
-    lang = user_data.get("language", "en")
-    is_premium = message.from_user.is_premium or False
+    user = await get_user(message.from_user.id)
+    lang = user['language'] if user else "uz"
+    is_premium = bool(user['is_premium']) if user else False
     
     responses = {
         "uz": "Bosh menyu:",

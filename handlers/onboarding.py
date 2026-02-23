@@ -3,7 +3,7 @@ from aiogram.filters import CommandStart
 from aiogram.fsm.context import FSMContext
 from states import Registration
 from keyboards import get_language_keyboard, get_agreement_keyboard, get_phone_keyboard, get_main_menu_keyboard, get_plans_keyboard
-from database import save_webapp_data, update_user_phone, add_user, get_user_pricing_info
+from database import save_webapp_data, update_user_phone, add_user, get_user_pricing_info, get_user
 import json
 import logging
 
@@ -91,8 +91,8 @@ async def process_webapp_data(message: types.Message, state: FSMContext):
             )
 
             if success:
-                user_data = await state.get_data()
-                language = user_data.get("language", "en")
+                user_info = await get_user(message.from_user.id)
+                language = user_info['language'] if user_info else "uz"
                 
                 logger.info(f"User {message.from_user.id} accepted offer. Redirecting to phone input.")
                 
@@ -138,8 +138,8 @@ async def process_webapp_data(message: types.Message, state: FSMContext):
             )
 
             if success:
-                user_data = await state.get_data()
-                language = user_data.get("language", "en")
+                user_info = await get_user(message.from_user.id)
+                language = user_info['language'] if user_info else "uz"
                 
                 logger.info(f"User {message.from_user.id} verified via legacy form.")
                 
@@ -186,8 +186,8 @@ async def process_phone(message: types.Message, state: FSMContext):
         success = await update_user_phone(user_id, phone)
         
         if success:
-            user_data = await state.get_data()
-            language = user_data.get("language", "en")
+            user_info = await get_user(user_id)
+            language = user_info['language'] if user_info else "uz"
             
             # Use 'is_premium' from user object directly
             # Note: In real app, you might want to check DB or specific logic, 
