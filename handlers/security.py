@@ -6,7 +6,7 @@ import aiohttp
 import hashlib
 import os
 from config import VT_API_KEY, AD_PLACEHOLDER_TEXT
-from keyboards import get_main_menu_keyboard, get_back_keyboard
+from keyboards import get_main_menu_keyboard, get_back_keyboard, get_upgrade_keyboard
 from utils.formatter import format_scan_report
 import asyncio
 import re
@@ -40,20 +40,27 @@ async def get_analysis_result(session, analysis_id, max_attempts=15, interval=3)
     for attempt in range(max_attempts):
         try:
             async with session.get(url, headers=headers) as resp:
+                if resp.status == 429:
+                    logger.warning("VT API Rate limit exceeded (429). Waiting longer...")
+                    await asyncio.sleep(interval * 2)
+                    continue
+                    
                 if resp.status != 200:
                     logger.warning(f"VT poll attempt {attempt+1}: status {resp.status}")
                     await asyncio.sleep(interval)
                     continue
+                    
                 data = await resp.json()
                 attributes = data['data']['attributes']
                 status = attributes['status']
-                logger.info(f"VT poll attempt {attempt+1}: status={status}")
+                logger.debug(f"VT poll attempt {attempt+1}: status={status}")
                 
                 if status == 'completed':
                     return attributes
-                elif status == 'queued':
+                elif status in ['queued', 'in-progress']:
                     await asyncio.sleep(interval)
                 else:
+                    logger.info(f"VT status unknown: {status}")
                     await asyncio.sleep(interval)
         except Exception as e:
             logger.error(f"VT poll error: {e}")
@@ -235,13 +242,8 @@ async def nav_protection_app(message: types.Message):
         base_url = PLANS_WEBAPP_URL if PLANS_WEBAPP_URL else f"{WEBAPP_URL}/plans.html"
         url = f"{base_url}?lang={lang}&balance={balance}&test_used={test_used}&tg_premium={is_tg_premium}"
         
-        btn_back = {"uz": "⬅️ Ortga", "ru": "⬅️ Назад", "en": "⬅️ Back"}
-        
-        # Use ReplyKeyboardMarkup because InlineWebApps cannot send data back to the bot via sendData
-        keyboard = ReplyKeyboardMarkup(keyboard=[
-            [KeyboardButton(text="💎 Upgrade Plan / Tarifni Kuchaytirish", web_app=WebAppInfo(url=url))],
-            [KeyboardButton(text=btn_back.get(lang, "en"))]
-        ], resize_keyboard=True)
+        # Use centralized keyboard
+        keyboard = get_upgrade_keyboard(url, lang)
 
         # If user is on TEST PLAN (test_used=True and is_premium=True), show Upgrade Prompt
         # Note: We assume is_premium=True if test is active. 
@@ -402,13 +404,8 @@ async def nav_monitoring(message: types.Message):
         base_url = PLANS_WEBAPP_URL if PLANS_WEBAPP_URL else f"{WEBAPP_URL}/plans.html"
         url = f"{base_url}?lang={lang}&balance={balance}&test_used={test_used}&tg_premium={is_tg_premium}"
         
-        btn_back = {"uz": "⬅️ Ortga", "ru": "⬅️ Наzad", "en": "⬅️ Back"}
-        
-        # Use ReplyKeyboardMarkup
-        keyboard = ReplyKeyboardMarkup(keyboard=[
-            [KeyboardButton(text="💎 Upgrade Plan / Tarifni Kuchaytirish", web_app=WebAppInfo(url=url))],
-            [KeyboardButton(text=btn_back.get(lang, "en"))]
-        ], resize_keyboard=True)
+        # Use centralized keyboard
+        keyboard = get_upgrade_keyboard(url, lang)
         
         text = {
             "uz": (
@@ -497,13 +494,25 @@ async def process_file_check(message: types.Message, state: FSMContext):
 
     status_msg = await message.answer(f"⬇️ Fayl yuklanmoqda: {document.file_name}...")
     
-    file_id = document.file_id
-    file = await message.bot.get_file(file_id)
-    file_path = file.file_path
-    
-    local_path = f"downloads/{document.file_name}"
-    os.makedirs("downloads", exist_ok=True)
-    await message.bot.download_file(file_path, local_path)
+    user_db = await get_user(message.from_user.id)
+    lang = user_db['language'] if user_db else 'uz'
+
+    # Download with guard
+    try:
+        file_id = document.file_id
+        file_info = await message.bot.get_file(file_id)
+        local_path = f"downloads/{document.file_name}"
+        os.makedirs("downloads", exist_ok=True)
+        await message.bot.download_file(file_info.file_path, local_path)
+    except Exception as e:
+        logger.error(f"Download error: {e}")
+        error_msgs = {
+            "uz": "❌ Faylni yuklab olishda xatolik. Iltimos, qaytadan yuboring.",
+            "ru": "❌ Ошибка при загрузке файла. Пожалуйста, отправьте еще раз.",
+            "en": "❌ Download error. Please resend the file."
+        }
+        await status_msg.edit_text(error_msgs.get(lang, error_msgs["en"]))
+        return
     
     await status_msg.edit_text(f"🔍 Tahlil qilinmoqda: {document.file_name}...")
     result = await scan_file_virustotal(local_path)

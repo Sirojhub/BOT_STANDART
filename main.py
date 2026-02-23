@@ -3,6 +3,7 @@ import logging
 import os
 import signal
 import sys
+import time
 from datetime import datetime
 import pytz
 from aiogram import Bot, Dispatcher
@@ -53,20 +54,28 @@ ALLOWED_ORIGINS = "*"
 
 @web.middleware
 async def cors_and_logging_middleware(request, handler):
-    if request.method == "OPTIONS":
-        response = web.Response(status=200)
-        response.headers["Access-Control-Allow-Origin"] = ALLOWED_ORIGINS
-        response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
-        response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization, X-Telegram-Init-Data, X-Init-Data, ngrok-skip-browser-warning"
-        return response
-
+    start_time = time.time()
     try:
         response = await handler(request)
+        duration = time.time() - start_time
+        logger.info(f"🌐 {request.method} {request.path} - {response.status} ({duration:.2f}s)")
     except web.HTTPException as ex:
+        duration = time.time() - start_time
+        logger.warning(f"🌐 {request.method} {request.path} - {ex.status} ({duration:.2f}s) - {ex.reason}")
         response = ex
+    except Exception as e:
+        duration = time.time() - start_time
+        logger.error(f"💥 Server Error: {request.method} {request.path} - {e} ({duration:.2f}s)")
+        response = web.json_response({"success": False, "error": "Internal Server Error"}, status=500)
 
     response.headers["Access-Control-Allow-Origin"] = ALLOWED_ORIGINS
     return response
+
+# --- Global Error Handler ---
+async def global_error_handler(event: types.ErrorEvent):
+    """Logs unhandled exceptions from bot handlers."""
+    logger.error(f"❌ Critical error in bot: {event.exception}", exc_info=event.exception)
+    # Optionally notify admins if needed
 
 # ── Health Check ──────────────────────────────────────────────────────────
 async def health_check(request):
@@ -82,7 +91,9 @@ async def main():
     dp.message.middleware(ThrottlingMiddleware())
     dp.callback_query.middleware(ThrottlingMiddleware())
 
-    # 2. Setup Routers
+    # 2. Setup Routers & Global Error Handler
+    dp.errors.register(global_error_handler)
+    
     dp.include_router(admin.router)
     dp.include_router(start.router)
     dp.include_router(onboarding.router)

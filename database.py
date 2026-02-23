@@ -6,7 +6,6 @@ from typing import Optional
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
 # Ensure data directory exists
 os.makedirs("data", exist_ok=True)
 DB_NAME = "data/bot.db"
@@ -47,6 +46,23 @@ async def create_users_table():
                     is_tg_premium BOOLEAN DEFAULT 0
                 )
             """)
+
+            # Create bot_settings table for global configurations (e.g., AD text)
+            await db.execute("""
+                CREATE TABLE IF NOT EXISTS bot_settings (
+                    key TEXT PRIMARY KEY,
+                    value TEXT,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            
+            # Initialize default ad_text if missing
+            async with db.execute("SELECT key FROM bot_settings WHERE key = 'ad_text'") as cursor:
+                if not await cursor.fetchone():
+                    await db.execute(
+                        "INSERT INTO bot_settings (key, value) VALUES ('ad_text', ?)",
+                        ("Reklama joyi uchun: @admin",)
+                    )
             
             # Check for missing columns and add them (Migration logic)
             async with db.execute("PRAGMA table_info(users)") as cursor:
@@ -80,48 +96,43 @@ async def create_users_table():
                     except Exception as e:
                         logger.error(f"Error adding column {col}: {e}")
 
-            # Create bot_settings table
-            await db.execute("""
-                CREATE TABLE IF NOT EXISTS bot_settings (
-                    key TEXT PRIMARY KEY,
-                    value TEXT,
-                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                )
-            """)
-            
-            # Initialize default ad text
-            await db.execute("INSERT OR IGNORE INTO bot_settings (key, value) VALUES ('ad_text', '📢 Premium obuna: @GvardAdmin')")
+            # Create Index on referrer_id for faster referral lookups
+            await db.execute("CREATE INDEX IF NOT EXISTS idx_users_referrer ON users (referrer_id)")
 
             await db.commit()
-            logger.info(f"Database initialized successfully at {DB_NAME}.")
+            logger.info(f"✅ Database initialized successfully at {DB_NAME}.")
             
         except Exception as e:
             logger.error(f"Critical database initialization error: {e}")
 
 async def is_registered(user_id: int) -> bool:
     """Check if a user has completed registration."""
-    async with aiosqlite.connect(DB_NAME) as db:
-        async with db.execute(
-            "SELECT registration_complete, phone FROM users WHERE user_id = ?", 
-            (user_id,)
-        ) as cursor:
-            row = await cursor.fetchone()
-            if row:
-                # Considered registered if flag is true OR phone is present (legacy support)
-                return bool(row['registration_complete']) or bool(row['phone'])
-            return False
+    try:
+        async with aiosqlite.connect(DB_NAME) as db:
+            db.row_factory = aiosqlite.Row
+            async with db.execute(
+                "SELECT registration_complete, phone FROM users WHERE user_id = ?", 
+                (user_id,)
+            ) as cursor:
+                row = await cursor.fetchone()
+                if row:
+                    return bool(row['registration_complete']) or bool(row['phone'])
+                return False
+    except Exception as e:
+        logger.error(f"Error in is_registered for {user_id}: {e}")
+        return False
 
 async def update_last_active(user_id: int):
     """Update the last_active timestamp for a user."""
-    async with aiosqlite.connect(DB_NAME) as db:
-        try:
+    try:
+        async with aiosqlite.connect(DB_NAME) as db:
             await db.execute(
                 "UPDATE users SET last_active = CURRENT_TIMESTAMP WHERE user_id = ?", 
                 (user_id,)
             )
             await db.commit()
-        except Exception as e:
-            logger.error(f"Error updating last_active for {user_id}: {e}")
+    except Exception as e:
+        logger.error(f"Error updating last_active for {user_id}: {e}")
 
 async def save_webapp_data(user_id: int, full_name: str, region: str, district: str, mahalla: str, age: int) -> bool:
     """
@@ -154,7 +165,6 @@ async def save_webapp_data(user_id: int, full_name: str, region: str, district: 
         except Exception as e:
             logger.error(f"Error saving Web App data for user {user_id}: {e}")
             return False
-        return False # Fallback
 
 async def update_user_phone(user_id: int, phone: str) -> bool:
     """
@@ -172,7 +182,6 @@ async def update_user_phone(user_id: int, phone: str) -> bool:
         except Exception as e:
             logger.error(f"Error updating phone for user {user_id}: {e}")
             return False
-        return False # Fallback
 
 async def get_user(user_id: int):
     """
@@ -198,39 +207,58 @@ async def add_user(user_id: int, full_name: str, language: str, status: str, is_
         except Exception as e:
             logger.error(f"Error in add_user for {user_id}: {e}")
 
-async def update_referral_balance(user_id: int, amount: int):
+async def update_referral_balance(user_id: int, amount: int) -> bool:
     """Add (or subtract) amount to user's referral balance."""
-    async with aiosqlite.connect(DB_NAME) as db:
-        await db.execute("UPDATE users SET referral_balance = referral_balance + ? WHERE user_id = ?", (amount, user_id))
-        await db.commit()
+    try:
+        async with aiosqlite.connect(DB_NAME) as db:
+            await db.execute("UPDATE users SET referral_balance = referral_balance + ? WHERE user_id = ?", (amount, user_id))
+            await db.commit()
+            return True
+    except Exception as e:
+        logger.error(f"Error in update_referral_balance for {user_id}: {e}")
+        return False
 
 async def get_user_balance(user_id: int) -> int:
-    async with aiosqlite.connect(DB_NAME) as db:
-        async with db.execute("SELECT referral_balance FROM users WHERE user_id = ?", (user_id,)) as cursor:
-            row = await cursor.fetchone()
-            return row['referral_balance'] if row else 0
+    try:
+        async with aiosqlite.connect(DB_NAME) as db:
+            async with db.execute("SELECT referral_balance FROM users WHERE user_id = ?", (user_id,)) as cursor:
+                row = await cursor.fetchone()
+                return row['referral_balance'] if row else 0
+    except Exception as e:
+        logger.error(f"Error in get_user_balance for {user_id}: {e}")
+        return 0
 
-async def set_test_used(user_id: int):
-    async with aiosqlite.connect(DB_NAME) as db:
-        await db.execute("UPDATE users SET test_used = 1, is_premium = 1 WHERE user_id = ?", (user_id,))
-        await db.commit()
+async def set_test_used(user_id: int) -> bool:
+    try:
+        async with aiosqlite.connect(DB_NAME) as db:
+            await db.execute("UPDATE users SET test_used = 1, is_premium = 1 WHERE user_id = ?", (user_id,))
+            await db.commit()
+            return True
+    except Exception as e:
+        logger.error(f"Error in set_test_used for {user_id}: {e}")
+        return False
 
-async def activate_premium(user_id: int, duration_days: int = 30):
+async def activate_premium(user_id: int, duration_days: int = 30) -> bool:
     """Activate premium and handle referrer cashback."""
-    async with aiosqlite.connect(DB_NAME) as db:
-        # Activate premium
-        await db.execute("UPDATE users SET is_premium = 1 WHERE user_id = ?", (user_id,))
-        
-        # Get referrer
-        async with db.execute("SELECT referrer_id FROM users WHERE user_id = ?", (user_id,)) as cursor:
-            row = await cursor.fetchone()
-            referrer_id = row[0] if row else None
+    try:
+        async with aiosqlite.connect(DB_NAME) as db:
+            # Activate premium
+            await db.execute("UPDATE users SET is_premium = 1 WHERE user_id = ?", (user_id,))
             
-        # Cashback (1000 UZS)
-        if referrer_id:
-            await db.execute("UPDATE users SET referral_balance = referral_balance + 1000 WHERE user_id = ?", (referrer_id,))
-            
-        await db.commit()
+            # Get referrer
+            async with db.execute("SELECT referrer_id FROM users WHERE user_id = ?", (user_id,)) as cursor:
+                row = await cursor.fetchone()
+                referrer_id = row[0] if row else None
+                
+            # Cashback (1000 UZS)
+            if referrer_id:
+                await db.execute("UPDATE users SET referral_balance = referral_balance + 1000 WHERE user_id = ?", (referrer_id,))
+                
+            await db.commit()
+            return True
+    except Exception as e:
+        logger.error(f"Error in activate_premium for {user_id}: {e}")
+        return False
 
 async def get_user_pricing_info(user_id: int):
     """Get info needed for Plans Web App."""
@@ -252,45 +280,49 @@ async def get_admin_statistics() -> dict:
     """
     Get complete statistics for admin dashboard
     """
-    async with aiosqlite.connect(DB_NAME) as db:
-        # Total users
-        cursor = await db.execute("SELECT COUNT(*) FROM users")
-        total_users = (await cursor.fetchone())[0]
-        
-        # Premium users
-        cursor = await db.execute(
-            "SELECT COUNT(*) FROM users WHERE is_premium = 1"
-        )
-        premium_users = (await cursor.fetchone())[0]
-        
-        # Today's registrations
-        today_registrations = 0
-        try:
+    try:
+        async with aiosqlite.connect(DB_NAME) as db:
+            # Total users
+            cursor = await db.execute("SELECT COUNT(*) FROM users")
+            total_users = (await cursor.fetchone())[0]
+            
+            # Premium users
             cursor = await db.execute(
-                """SELECT COUNT(*) FROM users 
-                   WHERE DATE(created_at) = DATE('now')"""
+                "SELECT COUNT(*) FROM users WHERE is_premium = 1"
             )
-            today_registrations = (await cursor.fetchone())[0]
-        except Exception:
+            premium_users = (await cursor.fetchone())[0]
+            
+            # Today's registrations
             today_registrations = 0
-        
-        # Regional breakdown
-        cursor = await db.execute(
-            """SELECT region, COUNT(*) as count 
-               FROM users 
-               WHERE region IS NOT NULL AND region != ''
-               GROUP BY region 
-               ORDER BY count DESC"""
-        )
-        regional_data = await cursor.fetchall()
-        regional_stats = {row[0]: row[1] for row in regional_data}
-        
-        return {
-            "total_users": total_users,
-            "premium_users": premium_users,
-            "today_registrations": today_registrations,
-            "regional_stats": regional_stats
-        }
+            try:
+                cursor = await db.execute(
+                    """SELECT COUNT(*) FROM users 
+                       WHERE DATE(created_at) = DATE('now')"""
+                )
+                today_registrations = (await cursor.fetchone())[0]
+            except Exception:
+                today_registrations = 0
+            
+            # Regional breakdown
+            cursor = await db.execute(
+                """SELECT region, COUNT(*) as count 
+                   FROM users 
+                   WHERE region IS NOT NULL AND region != ''
+                   GROUP BY region 
+                   ORDER BY count DESC"""
+            )
+            regional_data = await cursor.fetchall()
+            regional_stats = {row[0]: row[1] for row in regional_data}
+            
+            return {
+                "total_users": total_users,
+                "premium_users": premium_users,
+                "today_registrations": today_registrations,
+                "regional_stats": regional_stats
+            }
+    except Exception as e:
+        logger.error(f"Error in get_admin_statistics: {e}")
+        return {"total_users": 0, "premium_users": 0, "today_registrations": 0, "regional_stats": {}}
 
 async def get_users_paginated(page: int = 1, search: str = "", limit: int = 20) -> dict:
     """
@@ -299,73 +331,85 @@ async def get_users_paginated(page: int = 1, search: str = "", limit: int = 20) 
     offset = (page - 1) * limit
     search_query = f"%{search}%"
     
-    async with aiosqlite.connect(DB_NAME) as db:
-        # Count total matches
-        async with db.execute(
-            """
-            SELECT COUNT(*) FROM users 
-            WHERE full_name LIKE ? OR username LIKE ? OR CAST(user_id AS TEXT) LIKE ?
-            """, 
-            (search_query, search_query, search_query)
-        ) as cursor:
-            total_records = (await cursor.fetchone())[0]
-            
-        # Fetch records
-        users = []
-        async with db.execute(
-            """
-            SELECT u.user_id, u.full_name, u.region, u.is_premium, u.is_banned, r.full_name, u.referrer_id
-            FROM users u
-            LEFT JOIN users r ON u.referrer_id = r.user_id
-            WHERE u.full_name LIKE ? OR u.username LIKE ? OR CAST(u.user_id AS TEXT) LIKE ?
-            ORDER BY u.user_id DESC 
-            LIMIT ? OFFSET ?
-            """,
-            (search_query, search_query, search_query, limit, offset)
-        ) as cursor:
-            async for row in cursor:
-                users.append({
-                    'user_id': row[0],
-                    'full_name': row[1] or "No Name",
-                    'region': row[2] or "Unknown",
-                    'is_premium': bool(row[3]),
-                    'is_banned': bool(row[4]),
-                    'referrer_name': row[5], # Can be None
-                    'referrer_id': row[6]    # Can be None
-                })
+    try:
+        async with aiosqlite.connect(DB_NAME) as db:
+            # Count total matches
+            async with db.execute(
+                """
+                SELECT COUNT(*) FROM users 
+                WHERE full_name LIKE ? OR username LIKE ? OR CAST(user_id AS TEXT) LIKE ?
+                """, 
+                (search_query, search_query, search_query)
+            ) as cursor:
+                total_records = (await cursor.fetchone())[0]
                 
-        return {
-            'users': users,
-            'total': total_records,
-            'pages': (total_records + limit - 1) // limit
-        }
+            # Fetch records
+            users = []
+            async with db.execute(
+                """
+                SELECT u.user_id, u.full_name, u.region, u.is_premium, u.is_banned, r.full_name, u.referrer_id
+                FROM users u
+                LEFT JOIN users r ON u.referrer_id = r.user_id
+                WHERE u.full_name LIKE ? OR u.username LIKE ? OR CAST(u.user_id AS TEXT) LIKE ?
+                ORDER BY u.user_id DESC 
+                LIMIT ? OFFSET ?
+                """,
+                (search_query, search_query, search_query, limit, offset)
+            ) as cursor:
+                async for row in cursor:
+                    users.append({
+                        'user_id': row[0],
+                        'full_name': row[1] or "No Name",
+                        'region': row[2] or "Unknown",
+                        'is_premium': bool(row[3]),
+                        'is_banned': bool(row[4]),
+                        'referrer_name': row[5], # Can be None
+                        'referrer_id': row[6]    # Can be None
+                    })
+                    
+            return {
+                'users': users,
+                'total': total_records,
+                'pages': (total_records + limit - 1) // limit
+            }
+    except Exception as e:
+        logger.error(f"Error in get_users_paginated: {e}")
+        return {'users': [], 'total': 0, 'pages': 0}
 
 async def toggle_user_premium(user_id: int) -> bool:
     """Toggle premium status, return new status."""
-    async with aiosqlite.connect(DB_NAME) as db:
-        # Get current status
-        async with db.execute("SELECT is_premium FROM users WHERE user_id = ?", (user_id,)) as cursor:
-            row = await cursor.fetchone()
-            if not row: return False
-            current_status = bool(row[0])
-            
-        new_status = not current_status
-        await db.execute("UPDATE users SET is_premium = ? WHERE user_id = ?", (new_status, user_id))
-        await db.commit()
-        return new_status
+    try:
+        async with aiosqlite.connect(DB_NAME) as db:
+            # Get current status
+            async with db.execute("SELECT is_premium FROM users WHERE user_id = ?", (user_id,)) as cursor:
+                row = await cursor.fetchone()
+                if not row: return False
+                current_status = bool(row[0])
+                
+            new_status = not current_status
+            await db.execute("UPDATE users SET is_premium = ? WHERE user_id = ?", (new_status, user_id))
+            await db.commit()
+            return new_status
+    except Exception as e:
+        logger.error(f"Error in toggle_user_premium for {user_id}: {e}")
+        return False
 
 async def ban_user(user_id: int) -> bool:
     """Toggle ban status, return new status."""
-    async with aiosqlite.connect(DB_NAME) as db:
-        async with db.execute("SELECT is_banned FROM users WHERE user_id = ?", (user_id,)) as cursor:
-            row = await cursor.fetchone()
-            if not row: return False
-            current_status = bool(row[0])
-            
-        new_status = not current_status
-        await db.execute("UPDATE users SET is_banned = ? WHERE user_id = ?", (new_status, user_id))
-        await db.commit()
-        return new_status
+    try:
+        async with aiosqlite.connect(DB_NAME) as db:
+            async with db.execute("SELECT is_banned FROM users WHERE user_id = ?", (user_id,)) as cursor:
+                row = await cursor.fetchone()
+                if not row: return False
+                current_status = bool(row[0])
+                
+            new_status = not current_status
+            await db.execute("UPDATE users SET is_banned = ? WHERE user_id = ?", (new_status, user_id))
+            await db.commit()
+            return new_status
+    except Exception as e:
+        logger.error(f"Error in ban_user for {user_id}: {e}")
+        return False
 
 async def get_all_user_ids(premium_only: bool = False) -> list[int]:
     """Get list of user IDs for broadcasting."""
@@ -373,16 +417,24 @@ async def get_all_user_ids(premium_only: bool = False) -> list[int]:
     if premium_only:
         query += " WHERE is_premium = 1"
         
-    async with aiosqlite.connect(DB_NAME) as db:
-        async with db.execute(query) as cursor:
-            return [row[0] for row in await cursor.fetchall()]
+    try:
+        async with aiosqlite.connect(DB_NAME) as db:
+            async with db.execute(query) as cursor:
+                return [row[0] for row in await cursor.fetchall()]
+    except Exception as e:
+        logger.error(f"Error in get_all_user_ids: {e}")
+    return []
 
 async def get_ad_text() -> str:
     """Get current global ad text."""
-    async with aiosqlite.connect(DB_NAME) as db:
-        async with db.execute("SELECT value FROM bot_settings WHERE key = 'ad_text'") as cursor:
-            row = await cursor.fetchone()
-            return row[0] if row else ""
+    try:
+        async with aiosqlite.connect(DB_NAME) as db:
+            async with db.execute("SELECT value FROM bot_settings WHERE key = 'ad_text'") as cursor:
+                row = await cursor.fetchone()
+                return row[0] if row else "Reklama joyi uchun: @admin"
+    except Exception as e:
+        logger.error(f"Error in get_ad_text: {e}")
+        return "Reklama joyi uchun: @admin"
 
 async def update_ad_text(new_text: str) -> bool:
     """Update global ad text."""
@@ -394,7 +446,8 @@ async def update_ad_text(new_text: str) -> bool:
             )
             await db.commit()
             return True
-        except Exception:
+        except Exception as e:
+            logger.error(f"Error in update_user_phone: {e}")
             return False
 
 async def reset_daily_stats():

@@ -11,9 +11,9 @@ def format_scan_report(stats: dict, link: str, language: str = 'uz', ad_text: st
     
     # Status Icons/Titles
     status_map = {
-        "uz": {"mal": "🚨 XAVFLI", "susp": "⚠️ SHUBHALI", "safe": "✅ XAVFSIZ", "title": "🔒 Xavfsizlik tekshiruvi natijasi", "file": "📎 Fayl/Havola", "res": "📊 Natija", "h": "🟢 Xavfsiz", "m": "🔴 Zararli", "s": "🟠 Shubheli", "u": "⚪️ Aniqlanmagan", "det": "🔗 Batafsil hisobot", "dis": "⚖️ Mas'uliyatni rad etish: Natijalar 100% kafolat bermaydi."},
-        "ru": {"mal": "🚨 ОПАСНО", "susp": "⚠️ ПОДОЗРИТЕЛЬНО", "safe": "✅ БЕЗОПАСНО", "title": "🔒 Результат проверки безопасности", "file": "📎 Файл/Ссылка", "res": "📊 Результат", "h": "🟢 Безопасно", "m": "🔴 Вредоносно", "s": "🟠 Подозрительно", "u": "⚪️ Не определено", "det": "🔗 Детальный отчет", "dis": "⚖️ Отказ от ответственности: Результаты не гарантируют 100% точность."},
-        "en": {"mal": "🚨 DANGEROUS", "susp": "⚠️ SUSPICIOUS", "safe": "✅ SAFE", "title": "🔒 Security Scan Result", "file": "📎 File/Link", "res": "📊 Result", "h": "🟢 Safe", "m": "🔴 Malicious", "s": "🟠 Suspicious", "u": "⚪️ Undetected", "det": "🔗 Detailed report", "dis": "⚖️ Disclaimer: Results are based on VT and do not guarantee 100% safety."}
+        "uz": {"mal": "🚨 XAVFLI", "susp": "⚠️ SHUBHALI", "safe": "✅ XAVFSIZ (Tozalangan)", "title": "🔒 Xavfsizlik tekshiruvi natijasi", "file": "📎 Fayl/Havola", "res": "📊 Natija", "h": "🟢 Xavfsiz", "m": "🔴 Zararli", "s": "🟠 Shubheli", "u": "⚪️ Aniqlanmagan", "det": "🔗 Batafsil hisobot", "dis": "⚖️ Mas'uliyatni rad etish: Natijalar 100% kafolat bermaydi."},
+        "ru": {"mal": "🚨 ОПАСНО", "susp": "⚠️ ПОДОЗРИТЕЛЬНО", "safe": "✅ БЕЗОПАСНО (Проверено)", "title": "🔒 Результат проверки безопасности", "file": "📎 Файл/Ссылка", "res": "📊 Результат", "h": "🟢 Безопасно", "m": "🔴 Вредоносно", "s": "🟠 Подозрительно", "u": "⚪️ Не определено", "det": "🔗 Детальный отчет", "dis": "⚖️ Отказ от ответственности: Результаты не гарантируют 100% точность."},
+        "en": {"mal": "🚨 DANGEROUS", "susp": "⚠️ SUSPICIOUS", "safe": "✅ SAFE (Verified Clean)", "title": "🔒 Security Scan Result", "file": "📎 File/Link", "res": "📊 Result", "h": "🟢 Safe", "m": "🔴 Malicious", "s": "🟠 Suspicious", "u": "⚪️ Undetected", "det": "🔗 Detailed report", "dis": "⚖️ Disclaimer: Results are based on VT and do not guarantee 100% safety."}
     }
     
     t = status_map.get(language, status_map["en"])

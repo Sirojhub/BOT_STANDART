@@ -66,11 +66,14 @@ async def admin_middleware(request, handler):
         user_id = user_data.get('id')
         
         if user_id not in ADMIN_IDS:
+            logger.warning(f"Unauthorized admin access attempt by ID: {user_id}")
             return web.json_response({"success": False, "error": "Unauthorized"}, status=403)
         
         request['admin_id'] = user_id
+        logger.info(f"Admin Access: {request.method} {request.path} by {user_id}")
         return await handler(request)
     except ValueError as e:
+        logger.error(f"Admin Auth Failed: {e}")
         return web.json_response({"success": False, "error": str(e)}, status=401)
 
 # --- Command Handler ---
@@ -95,9 +98,6 @@ async def cmd_approve(message: types.Message):
             await message.answer("⚠️ Format: `/approve user_id`")
             return
         
-        target_user_id = int(args[1])
-        
-        # Activate Premium & Handle Referral Reward
         target_user_id = int(args[1])
         
         # Activate Premium & Handle Referral Reward

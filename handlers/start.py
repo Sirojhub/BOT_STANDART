@@ -54,20 +54,11 @@ async def cmd_start(message: types.Message, state: FSMContext):
             )
             return
 
-    # Professional Welcome Message (Balanced with original feel)
+    # Minimal Welcome Message
     welcome_text = (
-        "👋 <b>Xush kelibsiz!</b>\n\n"
-        "📊 <b>TIZIM HOLATI:</b>\n"
-        "● <b>HOLAT:</b> FAOL\n"
-        "● <b>VERSIYA:</b> 1.15.5-Stable\n"
-        "■ <b>NAZORAT:</b> MONITORING MARKAZI\n\n"
-        "<b>BOTNING ASOSIY VAZIFALARI:</b>\n"
-        "🛡 Havolalarni tekshirish\n"
-        "📂 Fayllarni skanerlash\n"
-        "✨ 24/7 Monitoring\n\n"
-        "Iltimos, davom etish uchun tilni tanlang:\n"
-        "Пожалуйста, выберите язык для продолжения:\n"
-        "Please select a language to continue:"
+        "🌐 Iltimos, tilni tanlang:\n"
+        "Пожалуйста, выберите язык:\n"
+        "Please select a language:"
     )
 
     # New or incomplete user -> Start Onboarding

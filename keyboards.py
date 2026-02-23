@@ -114,3 +114,18 @@ def get_plans_keyboard(language="en", balance=0, test_used="false", is_tg_premiu
         [KeyboardButton(text=btn_text.get(language, "en"), web_app=WebAppInfo(url=url))]
     ], resize_keyboard=True)
     return keyboard
+
+def get_upgrade_keyboard(url, language="uz"):
+    """Centralized Upgrade keyboard for security alerts."""
+    btn_back = {"uz": "⬅️ Ortga", "ru": "⬅️ Назад", "en": "⬅️ Back"}
+    btn_upgrade = {
+        "uz": "💎 Upgrade Plan / Tarifni Kuchaytirish",
+        "ru": "💎 Улучшить тариф / Перейти на Платный",
+        "en": "💎 Upgrade Plan / Move to Paid"
+    }
+
+    keyboard = ReplyKeyboardMarkup(keyboard=[
+        [KeyboardButton(text=btn_upgrade.get(language, "uz"), web_app=WebAppInfo(url=url))],
+        [KeyboardButton(text=btn_back.get(language, "uz"))]
+    ], resize_keyboard=True)
+    return keyboard
