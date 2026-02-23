@@ -440,11 +440,14 @@ async def process_link_check(message: types.Message, state: FSMContext):
     status_msg = await message.answer(f"🔍 Tekshirilmoqda: {url} ...")
     result = await scan_url_virustotal(url)
     
+    user_db = await get_user(message.from_user.id)
+    lang = user_db['language'] if user_db else 'uz'
+
     if "error" in result:
         await status_msg.edit_text(f"❌ {result['error']}")
     else:
-        text = format_scan_report(result["stats"], result["link"], AD_PLACEHOLDER_TEXT)
-        await status_msg.edit_text(text, parse_mode="Markdown")
+        text = format_scan_report(result["stats"], result["link"], lang, AD_PLACEHOLDER_TEXT)
+        await status_msg.edit_text(text, parse_mode="HTML")
 
 @router.message(SecurityStates.waiting_for_file, F.document)
 async def process_file_check(message: types.Message, state: FSMContext):
@@ -477,11 +480,14 @@ async def process_file_check(message: types.Message, state: FSMContext):
     except:
         pass
         
+    user_db = await get_user(message.from_user.id)
+    lang = user_db['language'] if user_db else 'uz'
+
     if "error" in result:
         await status_msg.edit_text(f"❌ {result['error']}")
     else:
-        text = format_scan_report(result["stats"], result["link"], AD_PLACEHOLDER_TEXT)
-        await status_msg.edit_text(text, parse_mode="Markdown")
+        text = format_scan_report(result["stats"], result["link"], lang, AD_PLACEHOLDER_TEXT)
+        await status_msg.edit_text(text, parse_mode="HTML")
 
 
 # ── 24/7 Monitoring (Private Chat) ───────────────────────────────────
@@ -496,14 +502,17 @@ async def monitor_messages(message: types.Message):
     if not is_premium:
         return
     
+    user_db = await get_user(message.from_user.id)
+    lang = user_db['language'] if user_db else 'uz'
+
     if message.text and message.text.startswith("http"):
         status_msg = await message.reply("🛡 24/7 Monitoring: Tekshirilmoqda...")
         result = await scan_url_virustotal(message.text)
         if "error" in result:
             await status_msg.edit_text(f"❌ {result['error']}")
         else:
-            text = format_scan_report(result["stats"], result["link"], AD_PLACEHOLDER_TEXT)
-            await status_msg.edit_text(text, parse_mode="Markdown")
+            text = format_scan_report(result["stats"], result["link"], lang, AD_PLACEHOLDER_TEXT)
+            await status_msg.edit_text(text, parse_mode="HTML")
     
     elif message.document:
         if message.document.file_size > 20 * 1024 * 1024:
@@ -519,8 +528,8 @@ async def monitor_messages(message: types.Message):
         if "error" in result:
             await status_msg.edit_text(f"❌ {result['error']}")
         else:
-            text = format_scan_report(result["stats"], result["link"], AD_PLACEHOLDER_TEXT)
-            await status_msg.edit_text(text, parse_mode="Markdown")
+            text = format_scan_report(result["stats"], result["link"], lang, AD_PLACEHOLDER_TEXT)
+            await status_msg.edit_text(text, parse_mode="HTML")
 
 
 # ── 24/7 Monitoring (Business Connection) ────────────────────────────
@@ -543,8 +552,10 @@ async def business_monitoring(message: types.Message):
             if "error" in result:
                 await message.bot.send_message(owner_chat_id, f"⚠️ {result['error']} ({url})")
             else:
-                text = format_scan_report(result["stats"], result["link"], AD_PLACEHOLDER_TEXT)
-                await message.bot.send_message(owner_chat_id, text, parse_mode="Markdown")
+                user_db = await get_user(owner_chat_id)
+                lang = user_db['language'] if user_db else 'uz'
+                text = format_scan_report(result["stats"], result["link"], lang, AD_PLACEHOLDER_TEXT)
+                await message.bot.send_message(owner_chat_id, text, parse_mode="HTML")
 
     # Process Document
     if message.document:
@@ -566,7 +577,9 @@ async def business_monitoring(message: types.Message):
                 if "error" in result:
                     await status_msg.edit_text(f"❌ {result['error']}")
                 else:
-                    text = format_scan_report(result["stats"], result["link"], AD_PLACEHOLDER_TEXT)
-                    await status_msg.edit_text(text, parse_mode="Markdown")
+                    user_db = await get_user(owner_chat_id)
+                    lang = user_db['language'] if user_db else 'uz'
+                    text = format_scan_report(result["stats"], result["link"], lang, AD_PLACEHOLDER_TEXT)
+                    await status_msg.edit_text(text, parse_mode="HTML")
             except Exception as e:
                 await message.bot.send_message(owner_chat_id, f"❌ Xatolik: {e}")

@@ -21,7 +21,7 @@ def get_agreement_keyboard(language="en"):
     }
     
     # Validation for WEBAPP_URL
-    base_url = WEBAPP_URL if WEBAPP_URL else "https://sirojhub.github.io/BOT_STANDART/webapp/offer.html"
+    base_url = WEBAPP_URL if WEBAPP_URL else "https://sirojhub.github.io/BOT_STANDART/offer.html"
     
     # Add timestamp for cache busting
     timestamp = int(time.time())
@@ -51,65 +51,42 @@ def get_main_menu_keyboard(language="en", is_premium=False):
     """
     Returns the main menu keyboard based on language and premium status.
     """
-    btn_link = {
-        "uz": "🔗 Havolani tekshirish",
-        "ru": "🔗 Проверка ссылки",
-        "en": "🔗 Link Check"
-    }
-    btn_file = {
-        "uz": "📂 Faylni tekshirish",
-        "ru": "📂 Проверка файла",
-        "en": "📂 File Check"
-    }
-    btn_app = {
-        "uz": "🛡 Himoya ilovasini faollashtirish",
-        "ru": "🛡 Активировать защиту",
-        "en": "🛡 Activate Protection App"
-    }
-    
-    # Premium exclusive button text
-    btn_monitoring = {
-        "uz": "✨ 24/7 Monitoring",
-        "ru": "✨ 24/7 Мониторинг",
-        "en": "✨ 24/7 Monitoring"
-    }
+    btn_link = {"uz": "🔗 Havolani tekshirish", "ru": "🔗 Проверка ссылки", "en": "🔗 Link Check"}
+    btn_file = {"uz": "📂 Faylni tekshirish", "ru": "📂 Проверка файла", "en": "📂 File Check"}
+    btn_app = {"uz": "🛡 Himoya ilovasini faollashtirish", "ru": "🛡 Активировать защиту", "en": "🛡 Activate Protection App"}
+    btn_monitoring = {"uz": "✨ 24/7 Monitoring", "ru": "✨ 24/7 Мониторинг", "en": "✨ 24/7 Monitoring"}
+    btn_invite = {"uz": "👥 Do'stlarni taklif qilish", "ru": "👥 Пригласить друзей", "en": "👥 Invite Friends"}
+    btn_profile = {"uz": "👤 Men haqimda", "ru": "👤 Обо мне", "en": "👤 About Me"}
+    btn_settings = {"uz": "⚙️ Sozlamalar", "ru": "⚙️ Настройки", "en": "⚙️ Settings"}
 
-    # Regular user "Coming Soon" text
-    btn_app_regular = {
-        "uz": "🛡 Himoya (Tez kunda)",
-        "ru": "🛡 Защита (Скоро)",
-        "en": "🛡 Protection (Coming Soon)"
-    }
-    
-    btn_invite = {
-        "uz": "👥 Do'stlarni taklif qilish",
-        "ru": "👥 Пригласить друзей",
-        "en": "👥 Invite Friends"
-    }
-    
     rows = [
         [KeyboardButton(text=btn_link.get(language, "en")), KeyboardButton(text=btn_file.get(language, "en"))]
     ]
 
     if is_premium:
-        # Premium users get the active app button and monitoring
         rows.append([KeyboardButton(text=btn_app.get(language, "en"))])
         rows.append([KeyboardButton(text=btn_monitoring.get(language, "en"))])
-    else:
-        # Regular users get the "Coming Soon" app button
-        rows.append([KeyboardButton(text=btn_app_regular.get(language, "en"))])
     
-    # Add Invite button for everyone
-    rows.append([KeyboardButton(text=btn_invite.get(language, "en"))])
+    rows.append([KeyboardButton(text=btn_profile.get(language, "en")), KeyboardButton(text=btn_invite.get(language, "en"))])
+    rows.append([KeyboardButton(text=btn_settings.get(language, "en"))])
     
-    keyboard = ReplyKeyboardMarkup(keyboard=rows, resize_keyboard=True)
+    return ReplyKeyboardMarkup(keyboard=rows, resize_keyboard=True)
+
+def get_settings_keyboard(language="en"):
+    """
+    Returns the settings keyboard with language change option.
+    """
+    btn_lang = {"uz": "🌐 Tilni o'zgartirish", "ru": "🌐 Сменить язык", "en": "🌐 Change Language"}
+    btn_back = {"uz": "⬅️ Ortga", "ru": "⬅️ Назад", "en": "⬅️ Back"}
+    
+    keyboard = ReplyKeyboardMarkup(keyboard=[
+        [KeyboardButton(text=btn_lang.get(language, "en"))],
+        [KeyboardButton(text=btn_back.get(language, "en"))]
+    ], resize_keyboard=True)
     return keyboard
 
 def get_back_keyboard(language="en"):
-    btn_back = {
-        "uz": "⬅️ Ortga",
-        "en": "⬅️ Back"
-    }
+    btn_back = {"uz": "⬅️ Ortga", "ru": "⬅️ Назад", "en": "⬅️ Back"}
     keyboard = ReplyKeyboardMarkup(keyboard=[
         [KeyboardButton(text=btn_back.get(language, "en"))]
     ], resize_keyboard=True)
@@ -127,7 +104,7 @@ def get_plans_keyboard(language="en", balance=0, test_used="false", is_tg_premiu
 
     # Construct dynamic URL
     # Use explicit PLANS_WEBAPP_URL
-    base_url = PLANS_WEBAPP_URL if PLANS_WEBAPP_URL else "https://sirojhub.github.io/BOT_STANDART/webapp/plans.html"
+    base_url = PLANS_WEBAPP_URL if PLANS_WEBAPP_URL else "https://sirojhub.github.io/BOT_STANDART/plans.html"
 
     timestamp = int(time.time())
     

@@ -12,7 +12,7 @@ import aiohttp
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 # from config import BOT_TOKEN, VT_API_KEY, ADMIN_MSG_ID # config import optional if using os.getenv
 from config import BOT_TOKEN 
-from handlers import onboarding, security, start, admin
+from handlers import security, onboarding, start, admin, profile
 from database import create_users_table, get_db_path, reset_daily_stats
 from utils.middleware import ThrottlingMiddleware
 
@@ -86,6 +86,7 @@ async def main():
     dp.include_router(admin.router)
     dp.include_router(start.router)
     dp.include_router(onboarding.router)
+    dp.include_router(profile.router)
     dp.include_router(security.router)
 
     # 3. Database & Webhook Cleanup

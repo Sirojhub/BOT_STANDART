@@ -39,33 +39,47 @@ async def cmd_start(message: types.Message, state: FSMContext):
     user = await get_user(user_id)
     
     if user:
-        # Check if banned (Index 15 assumed based on previous check, let's verify)
-        # 0:id, 1:username, 2:name, 3:region, 4:dist, 5:mahalla, 6:age, 7:phone, 8:lang, 9:created, 10:status, 11:offer, 12:reg_complete, 13:last_active, 14:premium, 15:banned
-        if len(user) > 15 and user[15]:
+        # Check if banned
+        if user['is_banned']:
             await message.answer("⛔️ Sizning hisobingiz bloklangan.\n\nAdmin bilan bog'laning: @GvardAdmin")
             return
 
         # Check registration complete
-        if user[12]: # registration_complete
+        if user['registration_complete']:
             await state.clear()
+            lang = user['language'] or 'uz'
             await message.answer(
                 "🏠 Asosiy menyu",
-                reply_markup=get_main_menu_keyboard('uz', bool(user[14])) # user[14] is is_premium
+                reply_markup=get_main_menu_keyboard(lang, bool(user['is_premium']))
             )
             return
+
+    # Welcome screen from drawing
+    welcome_text = (
+        "<b>[ SARHAD KIBERXAVFSIZLIK TIZIMI ]</b>\n\n"
+        "● <b>HOLAT:</b> TIZIM FAOL\n"
+        "● <b>VERSIYA:</b> 1.15.5-BARQAROR\n"
+        "■ <b>NAZORAT:</b> SARHAD MONITORING MARKAZI\n\n"
+        "<b>TIZIMNING ASOSIY VAZIFALARI:</b>\n"
+        "> HAVOLALARNI TEKSHIRISH: ShubhalI sayt manzillarini tahlil qilish.\n"
+        "> FAYLLARNI SKANERLASH: Virus va zararli dasturlarni aniqlash.\n"
+        "> ILOVA NAZORATI: Zararli fayllarni ochishdan oldin avtomatik skanerlash.\n"
+        "> DOIMIY HIMOYA: Premium foydalanuvchilar uchun 24/7 nazorat.\n\n"
+        "<b>FOYDALANUVCHI DIQQATIGA:</b>\n"
+        "Xavfsizlik tekshiruvini boshlash va tizimga kirish uchun pastdagi tilni tanlang.\n\n"
+        "<i>ESLATMA: BARCHA AMALLAR XAVFSIZLIK YUZASIDAN QAYD ETIB BORILADI. RUXSATSIZ HARAKATLAR CHEKLANADI.</i>"
+    )
 
     # New or incomplete user -> Start Onboarding
     await state.clear()
     
-    # Re-apply referral if valid
     if valid_referrer_id:
         await state.update_data(referrer_id=valid_referrer_id)
         
     await message.answer(
-        "👋 Xush kelibsiz! Iltimos, tilni tanlang:\n"
-        "Добро пожаловать! Пожалуйста, выберите язык:\n"
-        "Welcome! Please select your language:",
-        reply_markup=get_language_keyboard()
+        welcome_text,
+        reply_markup=get_language_keyboard(),
+        parse_mode="HTML"
     )
     await state.set_state(Registration.choosing_language)
     logger.info(f"New/Incomplete user {user_id} started onboarding.")

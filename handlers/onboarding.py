@@ -48,15 +48,17 @@ async def process_language(message: types.Message, state: FSMContext):
     )
 
     text = {
-        "uz": "Ro'yxatdan o'tish uchun quyidagi tugmani bosing:",
-        "ru": "Нажмите кнопку ниже для регистрации:",
-        "en": "Press the button below to register:"
+        "uz": "✅ Ro'yxatdan o'tish yakunlandi! Siz himoyalangan tizimga kirdingiz.",
+        "ru": "✅ Регистрация завершена! Вы вошли в защищенную систему.",
+        "en": "✅ Registration complete! You have entered the secured system."
     }
     
-    # Send WebApp button
+    # Determine if user is premium for the main menu keyboard
+    is_premium = message.from_user.is_premium or False
+    
     await message.answer(
-        text.get(lang_code, "en"),
-        reply_markup=get_agreement_keyboard(lang_code)
+        text.get(lang_code, text["en"]),
+        reply_markup=get_main_menu_keyboard(lang_code, is_premium)
     )
     await state.set_state(Registration.waiting_for_webapp)
 
@@ -95,6 +97,8 @@ async def process_webapp_data(message: types.Message, state: FSMContext):
                 user_data = await state.get_data()
                 language = user_data.get("language", "en")
                 
+                logger.info(f"User {message.from_user.id} accepted offer. Redirecting to phone input.")
+                
                 text = {
                     "uz": "✅ Offerta qabul qilindi! 📱 Endi telefon raqamingizni yuboring:",
                     "ru": "✅ Оферта принята! 📱 Теперь отправьте ваш номер телефона:",
@@ -107,36 +111,40 @@ async def process_webapp_data(message: types.Message, state: FSMContext):
                 )
                 await state.set_state(Registration.waiting_for_phone)
             else:
+                logger.error(f"Failed to save offer acceptance for user {message.from_user.id}")
                 await message.answer("❌ Server error while saving data. Please contact support.")
             return
 
         # Legacy Flow (Keep for backward compatibility if needed)
-        full_name = data.get("f")
-        region = data.get("r")
-        district = data.get("d")
-        mahalla = data.get("m")
-        age = data.get("a")
-        status = data.get("s")
+        f_name = data.get("f")
+        r_name = data.get("r")
+        d_name = data.get("d")
+        m_name = data.get("m")
+        u_age = data.get("a")
+        u_status = data.get("s")
 
         # Basic Validation
-        if not all([full_name, region, district, mahalla, age]):
+        if not all([f_name, r_name, d_name, m_name, u_age]):
+            logger.warning(f"Incomplete legacy data from user {message.from_user.id}: {data}")
             await message.answer("⚠️ Incomplete data received. Please try again.")
             return
 
-        if status == "verified":
+        if u_status == "verified":
              # Save to database
             success = await save_webapp_data(
                 user_id=message.from_user.id,
-                full_name=full_name,
-                region=region,
-                district=district,
-                mahalla=mahalla,
-                age=int(age)
+                full_name=f_name,
+                region=r_name,
+                district=d_name,
+                mahalla=m_name,
+                age=int(u_age)
             )
 
             if success:
                 user_data = await state.get_data()
                 language = user_data.get("language", "en")
+                
+                logger.info(f"User {message.from_user.id} verified via legacy form.")
                 
                 text = {
                     "uz": "✅ Ma'lumotlar qabul qilindi! 📱 Endi telefon raqamingizni yuboring:",
@@ -150,6 +158,7 @@ async def process_webapp_data(message: types.Message, state: FSMContext):
                 )
                 await state.set_state(Registration.waiting_for_phone)
             else:
+                logger.error(f"Failed to save legacy data for user {message.from_user.id}")
                 await message.answer("❌ Server error while saving data. Please contact support.")
 
     except json.JSONDecodeError:

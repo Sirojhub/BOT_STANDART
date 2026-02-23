@@ -20,6 +20,7 @@ async def create_users_table():
     Renamed from init_db to maintain compatibility with main.py.
     """
     async with aiosqlite.connect(DB_NAME) as db:
+        db.row_factory = aiosqlite.Row
         try:
             # Create table if it doesn't exist
             await db.execute("""
@@ -107,7 +108,7 @@ async def is_registered(user_id: int) -> bool:
             row = await cursor.fetchone()
             if row:
                 # Considered registered if flag is true OR phone is present (legacy support)
-                return bool(row[0]) or bool(row[1])
+                return bool(row['registration_complete']) or bool(row['phone'])
             return False
 
 async def update_last_active(user_id: int):
@@ -153,6 +154,7 @@ async def save_webapp_data(user_id: int, full_name: str, region: str, district: 
         except Exception as e:
             logger.error(f"Error saving Web App data for user {user_id}: {e}")
             return False
+        return False # Fallback
 
 async def update_user_phone(user_id: int, phone: str) -> bool:
     """
@@ -170,18 +172,18 @@ async def update_user_phone(user_id: int, phone: str) -> bool:
         except Exception as e:
             logger.error(f"Error updating phone for user {user_id}: {e}")
             return False
+        return False # Fallback
 
 async def get_user(user_id: int):
     """
     Retrieve a user by ID.
     """
     async with aiosqlite.connect(DB_NAME) as db:
+        db.row_factory = aiosqlite.Row
         async with db.execute("SELECT * FROM users WHERE user_id = ?", (user_id,)) as cursor:
-            # Fetch column names to return a dict-like object if feasible, or just tuple
-            # For now, consistent with existing logic (tuple)
             return await cursor.fetchone()
 
-async def add_user(user_id: int, full_name: str, language: str, status: str, is_offer_accepted: bool = True, region: str = None, district: str = None, age: int = None, referrer_id: int = None):
+async def add_user(user_id: int, full_name: str, language: str, status: str, is_offer_accepted: bool = True, region: Optional[str] = None, district: Optional[str] = None, age: Optional[int] = None, referrer_id: Optional[int] = None):
     """
     Legacy function wrapper to maintain compatibility if called from other modules.
     Delegates to appropriate logic or basic insert.
@@ -206,7 +208,7 @@ async def get_user_balance(user_id: int) -> int:
     async with aiosqlite.connect(DB_NAME) as db:
         async with db.execute("SELECT referral_balance FROM users WHERE user_id = ?", (user_id,)) as cursor:
             row = await cursor.fetchone()
-            return row[0] if row else 0
+            return row['referral_balance'] if row else 0
 
 async def set_test_used(user_id: int):
     async with aiosqlite.connect(DB_NAME) as db:

@@ -82,9 +82,6 @@ async def cmd_admin(message: types.Message):
     markup = types.InlineKeyboardMarkup(inline_keyboard=[
         [types.InlineKeyboardButton(text="🛠 Open Admin Panel", web_app=WebAppInfo(url=ADMIN_WEBAPP_URL))]
     ])
-    markup = types.InlineKeyboardMarkup(inline_keyboard=[
-        [types.InlineKeyboardButton(text="🛠 Open Admin Panel", web_app=WebAppInfo(url=ADMIN_WEBAPP_URL))]
-    ])
     await message.answer("🔒 Admin Panelga xush kelibsiz.", reply_markup=markup)
 
 @router.message(Command("approve"))
@@ -110,13 +107,14 @@ async def cmd_approve(message: types.Message):
         # Get referrer info for display
         user = await get_user(target_user_id)
         referrer_info = "Yo'q"
-        if user and len(user) > 17 and user[17]:
-             referrer_id = user[17]
+        if user and user['referrer_id']:
+             referrer_id = user['referrer_id']
              try:
                  referrer = await get_user(referrer_id)
-                 referrer_name = referrer[2] if referrer and len(referrer) > 2 else "Noma'lum"
+                 referrer_name = referrer['full_name'] if referrer else "Noma'lum"
                  referrer_info = f"{referrer_name} (ID: {referrer_id})"
-             except:
+             except Exception as e:
+                 logger.error(f"Error fetching referrer {referrer_id}: {e}")
                  referrer_info = f"ID: {referrer_id}"
 
         await message.answer(
@@ -202,17 +200,25 @@ async def api_broadcast(request):
         premium_only = (target == 'premium')
         user_ids = await get_all_user_ids(premium_only)
         
-        bot = request.app['bot'] # Access bot instance from app
-        count = 0
-        for uid in user_ids:
-            try:
-                await bot.send_message(uid, message_text)
-                count += 1
-                await asyncio.sleep(0.05) # Rate limit protection
-            except:
-                pass
-        return web.json_response({"success": True, "count": count})
+        bot = request.app['bot']
+
+        # Run broadcast in background task to avoid blocking the API response
+        async def run_broadcast():
+            count = 0
+            for uid in user_ids:
+                try:
+                    await bot.send_message(uid, message_text)
+                    count += 1
+                    await asyncio.sleep(0.05) # Rate limit protection
+                except Exception as e:
+                    logger.debug(f"Broadcast failed for {uid}: {e}")
+            logger.info(f"Broadcast completed. Sent to {count} users.")
+
+        asyncio.create_task(run_broadcast())
+        
+        return web.json_response({"success": True, "message": "Broadcast started in background", "estimated_users": len(user_ids)})
     except Exception as e:
+        logger.error(f"Broadcast error: {e}")
         return web.json_response({"success": False, "error": str(e)}, status=500)
 
 # --- Routes Setup ---
