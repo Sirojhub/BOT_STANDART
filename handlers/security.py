@@ -32,39 +32,55 @@ class SecurityStates(StatesGroup):
 
 # ── VirusTotal Core Functions ─────────────────────────────────────────
 
-async def get_analysis_result(session, analysis_id, max_attempts=15, interval=3):
-    """Polls VirusTotal for analysis completion with configurable retries."""
+async def get_analysis_result(session, analysis_id, language='uz', progress_callback=None):
+    """
+    Polls VirusTotal for analysis completion with adaptive timing and real-time updates.
+    - First 30s: Poll every 3s.
+    - After 30s: Poll every 7s.
+    - Max attempts: 60 (~5 minutes total).
+    """
     url = f"https://www.virustotal.com/api/v3/analyses/{analysis_id}"
     headers = {"x-apikey": VT_API_KEY}
     
-    for attempt in range(max_attempts):
+    max_attempts = 60
+    
+    # Progress labels
+    labels = {
+        "uz": "[MOTOR] Tahlil qilinmoqda... Urinish {current}/{max}",
+        "ru": "[МОТОР] Анализируется... Попытка {current}/{max}",
+        "en": "[ENGINE] Analyzing... Attempt {current}/{max}"
+    }
+    label = labels.get(language, labels["en"])
+    
+    for attempt in range(1, max_attempts + 1):
         try:
+            # Send progress update to UI
+            if progress_callback:
+                await progress_callback(label.format(current=attempt, max=max_attempts))
+
             async with session.get(url, headers=headers) as resp:
                 if resp.status == 429:
-                    logger.warning("VT API Rate limit exceeded (429). Waiting longer...")
-                    await asyncio.sleep(interval * 2)
+                    await asyncio.sleep(10)
                     continue
                     
                 if resp.status != 200:
-                    logger.warning(f"VT poll attempt {attempt+1}: status {resp.status}")
-                    await asyncio.sleep(interval)
+                    await asyncio.sleep(5)
                     continue
                     
                 data = await resp.json()
                 attributes = data['data']['attributes']
                 status = attributes['status']
-                logger.debug(f"VT poll attempt {attempt+1}: status={status}")
                 
                 if status == 'completed':
                     return attributes
-                elif status in ['queued', 'in-progress']:
-                    await asyncio.sleep(interval)
-                else:
-                    logger.info(f"VT status unknown: {status}")
-                    await asyncio.sleep(interval)
+                
+                # Adaptive timing
+                wait_time = 3 if attempt <= 10 else 7
+                await asyncio.sleep(wait_time)
+                
         except Exception as e:
             logger.error(f"VT poll error: {e}")
-            await asyncio.sleep(interval)
+            await asyncio.sleep(5)
     
     return None
 
@@ -94,59 +110,85 @@ async def check_file_hash(session, file_path):
     return None
 
 
-async def scan_url_virustotal(url: str):
-    """Scan URL via VirusTotal."""
+async def scan_url_virustotal(url: str, language='uz', progress_callback=None):
+    """Scan URL via VirusTotal with progress tracking."""
     if not VT_API_KEY or "YOUR_" in VT_API_KEY:
-        return {"error": "VirusTotal API Key o'rnatilmagan."}
+        error_msg = {
+            "uz": "VirusTotal API Key o'rnatilmagan.",
+            "ru": "API ключ VirusTotal не установлен.",
+            "en": "VirusTotal API Key not set."
+        }
+        return {"error": error_msg.get(language, error_msg["en"])}
         
     async with aiohttp.ClientSession() as session:
         headers = {"x-apikey": VT_API_KEY}
         try:
             # Step 1: Submit URL
+            if progress_callback:
+                await progress_callback("[CONN] Connecting to VirusTotal nodes...")
+                
             async with session.post(
                 "https://www.virustotal.com/api/v3/urls", 
                 data={"url": url}, 
                 headers=headers
             ) as resp:
                 if resp.status != 200:
-                    return {"error": f"URL yuborishda xatolik: {resp.status}"}
+                    return {"error": f"API Error: {resp.status}"}
                 data = await resp.json()
                 analysis_id = data['data']['id']
             
-            # Step 2: Poll for results (URL scans are usually fast)
-            result = await get_analysis_result(session, analysis_id, max_attempts=10, interval=2)
+            # Step 2: Poll for results
+            result = await get_analysis_result(session, analysis_id, language, progress_callback)
             
             # Build VT link
             try:
                 url_id = analysis_id.split('-')[1]
-                link = f"https://www.virustotal.com/gui/url/{url_id}/detection"
+                vt_link = f"https://www.virustotal.com/gui/url/{url_id}/detection"
             except:
-                link = f"https://www.virustotal.com/gui/search/{url}"
+                vt_link = f"https://www.virustotal.com/gui/search/{url}"
             
             if result:
-                return {"stats": result['stats'], "link": link}
+                return {"stats": result['stats'], "link": vt_link}
             else:
-                return {"error": "Tahlil vaqti tugadi. Keyinroq urinib ko'ring."}
+                to_msg = {
+                    "uz": "Tahlil vaqti tugadi (5 min). Natija hali tayyor emas.",
+                    "ru": "Время анализа истёкло (5 мин). Результат еще не готов.",
+                    "en": "Analysis timed out (5 min). Result is not ready yet."
+                }
+                return {"error": to_msg.get(language, to_msg["en"])}
                 
         except Exception as e:
-            return {"error": f"URL tekshirishda xatolik: {e}"}
+            return {"error": f"System Error: {e}"}
 
 
-async def scan_file_virustotal(file_path: str):
-    """Scan file via VirusTotal — first checks hash cache for instant results."""
+async def scan_file_virustotal(file_path: str, language='uz', progress_callback=None):
+    """Scan file via VirusTotal with progress tracking."""
     if not VT_API_KEY or "YOUR_" in VT_API_KEY:
-        return {"error": "VirusTotal API Key o'rnatilmagan."}
+        error_msg = {
+            "uz": "VirusTotal API Key o'rnatilmagan.",
+            "ru": "API ключ VirusTotal не установлен.",
+            "en": "VirusTotal API Key not set."
+        }
+        return {"error": error_msg.get(language, error_msg["en"])}
         
     async with aiohttp.ClientSession() as session:
         headers = {"x-apikey": VT_API_KEY}
         
-        # ═══ FAST PATH: Check hash first (instant!) ═══
+        # ═══ FAST PATH: Check hash first ═══
+        if progress_callback:
+            await progress_callback("[CHECK] Searching in global database...")
+            
         hash_result = await check_file_hash(session, file_path)
         if hash_result:
+            if progress_callback:
+                await progress_callback("[MATCH] Results found in seconds!")
             return hash_result
         
-        # ═══ SLOW PATH: Upload file for new analysis ═══
+        # ═══ SLOW PATH: Upload ═══
         try:
+            if progress_callback:
+                await progress_callback("[UPLOAD] Uploading file for deep scan...")
+                
             data = aiohttp.FormData()
             data.add_field('file', open(file_path, 'rb'), filename=os.path.basename(file_path))
             
@@ -158,8 +200,7 @@ async def scan_file_virustotal(file_path: str):
                 resp_data = await resp.json()
                 
                 if resp.status == 409:
-                    # File already exists in VT — get results by hash
-                    logger.info("VT 409: File already exists, fetching by hash")
+                    # Rare but possible if check_file_hash missed something
                     sha256 = hashlib.sha256()
                     with open(file_path, 'rb') as f:
                         for chunk in iter(lambda: f.read(8192), b''):
@@ -175,23 +216,28 @@ async def scan_file_virustotal(file_path: str):
                             stats = hash_data['data']['attributes']['last_analysis_stats']
                             link = f"https://www.virustotal.com/gui/file/{file_hash}/detection"
                             return {"stats": stats, "link": link}
-                    return {"error": "Fayl VT bazasida bor, lekin natijani olishda xatolik."}
+                    return {"error": "API Error: 409 Fetch Failure"}
                 
                 elif resp.status != 200:
-                    return {"error": f"Fayl yuklashda xatolik: {resp.status}"}
+                    return {"error": f"Upload Error: {resp.status}"}
                 
                 analysis_id = resp_data['data']['id']
             
-            # Poll for results (file scans take longer)
-            result = await get_analysis_result(session, analysis_id, max_attempts=15, interval=3)
-            link = f"https://www.virustotal.com/gui/file-analysis/{analysis_id}/detection"
+            # Poll for results
+            result = await get_analysis_result(session, analysis_id, language, progress_callback)
+            vt_link = f"https://www.virustotal.com/gui/file-analysis/{analysis_id}/detection"
             
             if result:
-                return {"stats": result['stats'], "link": link}
+                return {"stats": result['stats'], "link": vt_link}
             else:
-                return {"error": "Tahlil vaqti tugadi. Fayl katta bo'lishi mumkin — keyinroq urinib ko'ring."}
+                to_msg = {
+                    "uz": "Tahlil vaqti tugadi (5 min). Fayl juda katta bo'lishi mumkin.",
+                    "ru": "Время анализа истёкло (5 мин). Файл может быть слишком большим.",
+                    "en": "Analysis timed out (5 min). File might be too large."
+                }
+                return {"error": to_msg.get(language, to_msg["en"])}
         except Exception as e:
-            return {"error": f"Fayl tekshirishda xatolik: {e}"}
+            return {"error": f"System Error: {e}"}
 
 
 # ── Navigation Handlers ──────────────────────────────────────────────
@@ -229,10 +275,10 @@ async def nav_file_check(message: types.Message, state: FSMContext):
 async def nav_protection_app(message: types.Message):
     user_id = message.from_user.id
     stats = await get_user_pricing_info(user_id)
+    user_info = await get_user(user_id)
+    lang = user_info['language'] if user_info else "uz"
     
     if stats:
-        user_info = await get_user(user_id)
-        lang = user_info['language'] if user_info else "uz"
         balance = stats['balance']
         is_premium = str(stats['is_premium']).lower()
         test_used = str(stats['test_used']).lower()
@@ -245,27 +291,60 @@ async def nav_protection_app(message: types.Message):
         # Use centralized keyboard
         keyboard = get_upgrade_keyboard(url, lang)
 
-        # If user is on TEST PLAN (test_used=True and is_premium=True), show Upgrade Prompt
-        # Note: We assume is_premium=True if test is active. 
-        if stats['test_used'] and stats['is_premium']:
-             await message.answer(
-                "🔒 <b>Himoya Ilovasi (Pro)</b>\n\n"
+        # Labels
+        titles = {
+            "uz": "🔒 <b>Himoya Ilovasi (Pro)</b>",
+            "ru": "🔒 <b>Приложение Защиты (Pro)</b>",
+            "en": "🔒 <b>Protection App (Pro)</b>"
+        }
+        
+        test_prompt = {
+            "uz": (
                 "Siz hozir <b>Test Tarifidasiz</b>. Bu funksiya faqat to'liq versiyada ishlaydi.\n"
                 "Ilovani yuklab olish va aktivatsiya kodi olish uchun <b>Standart</b> yoki <b>Premium</b> tarifga o'ting.\n\n"
+                "⬇️ <b>Pastdagi tugmani bosing:</b>"
+            ),
+            "ru": (
                 "Вы находитесь на <b>Тестовом Тарифе</b>. Эта функция доступна только в полной версии.\n"
                 "Перейдите на <b>Стандарт</b> или <b>Премиум</b>, чтобы получить приложение и код активации.\n\n"
-                "⬇️ <b>Pastdagi tugmani bosing:</b>",
+                "⬇️ <b>Нажмите на кнопку ниже:</b>"
+            ),
+            "en": (
+                "You are currently on the <b>Test Plan</b>. This feature works only in the full version.\n"
+                "Upgrade to <b>Standard</b> or <b>Premium</b> to download the app and get an activation code.\n\n"
+                "⬇️ <b>Press the button below:</b>"
+            )
+        }
+
+        # If user is on TEST PLAN
+        if stats['test_used'] and stats['is_premium']:
+             await message.answer(
+                f"{titles.get(lang, titles['en'])}\n\n{test_prompt.get(lang, test_prompt['en'])}",
                 reply_markup=keyboard,
                 parse_mode="HTML"
             )
              return
         
         # If user is Standard/Premium (Paid) or Not Premium
+        main_prompt = {
+            "uz": (
+                "🛡 <b>SARHAD Premium</b>\n\n"
+                "Tarif rejasini tanlash va himoyani kuchaytirish uchun quyidagi tugmani bosing:\n\n"
+                "⬇️ <b>Pastdagi tugmani bosing:</b>"
+            ),
+            "ru": (
+                "🛡 <b>SARHAD Premium</b>\n\n"
+                "Нажмите кнопку ниже, чтобы выбрать тариф и усилить защиту:\n\n"
+                "⬇️ <b>Нажмите на кнопку ниже:</b>"
+            ),
+            "en": (
+                "🛡 <b>SARHAD Premium</b>\n\n"
+                "Press the button below to choose a plan and strengthen protection:\n\n"
+                "⬇️ <b>Press the button below:</b>"
+            )
+        }
         await message.answer(
-            "🛡 <b>SARHAD Premium</b>\n\n"
-            "Tarif rejasini tanlash va himoyani kuchaytirish uchun quyidagi tugmani bosing:\n"
-            "Нажмите кнопку ниже, чтобы выбрать тариф и усилить защиту:\n\n"
-            "⬇️ <b>Pastdagi tugmani bosing:</b>",
+            main_prompt.get(lang, main_prompt['en']),
             reply_markup=keyboard,
             parse_mode="HTML"
         )
@@ -275,8 +354,6 @@ async def nav_protection_app(message: types.Message):
             "ru": "⚠️ Ошибка загрузки данных.",
             "en": "⚠️ Error loading data."
         }
-        user = await get_user(user_id)
-        lang = user['language'] if user else "uz"
         await message.answer(error_msg.get(lang, error_msg["en"]))
 
 
@@ -288,21 +365,17 @@ async def process_buy_plan(message: types.Message):
             plan = data.get("plan")
             user_id = message.from_user.id
             stats = await get_user_pricing_info(user_id)
+            user_info = await get_user(user_id)
+            language = user_info['language'] if user_info else "uz"
             
             if not stats:
-                error_msg = {
+                error_msgs = {
                     "uz": "❌ Xatolik yuz berdi.",
                     "ru": "❌ Произошла ошибка.",
                     "en": "❌ An error occurred."
                 }
-                user_info = await get_user(user_id)
-                lang = user_info['language'] if user_info else "uz"
-                await message.answer(error_msg.get(lang, error_msg["en"]))
+                await message.answer(error_msgs.get(language, error_msgs["en"]))
                 return
-
-            # Fetch user language for consistent UI
-            user_info = await get_user(user_id)
-            language = user_info[8] if user_info else "en"  # user_info[8] is language column
 
             balance = stats['balance']
             
@@ -346,7 +419,7 @@ async def process_buy_plan(message: types.Message):
                         f"🔢 Карта: <code>{card_number}</code>\n"
                         f"💰 Цена: <b>{price} сум</b>\n\n"
                         f"❗️ После оплаты отправьте чек (скриншот) администратору:\n"
-                        f"👤 Админ: {admin_contact}\n\n"
+                        f"👤 Админ: {admin_contact}\\n\\n"
                         f"⏳ <i>Ваш тариф будет активирован после подтверждения оплаты.</i>"
                     ),
                     "en": (
@@ -515,6 +588,9 @@ async def nav_back(message: types.Message, state: FSMContext):
 @router.message(SecurityStates.waiting_for_link, F.text)
 async def process_link_check(message: types.Message, state: FSMContext):
     url = message.text
+    user_db = await get_user(message.from_user.id)
+    lang = user_db['language'] if user_db else 'uz'
+
     if not url.startswith("http"):
         err_msg = {
             "uz": "⚠️ Noto'g'ri URL. http:// yoki https:// bilan boshlang.",
@@ -529,17 +605,23 @@ async def process_link_check(message: types.Message, state: FSMContext):
     except:
         pass
 
-    progress_msg = {
-        "uz": f"🔍 Tekshirilmoqda: {url} ...",
-        "ru": f"🔍 Проверяется: {url} ...",
-        "en": f"🔍 Scanning: {url} ..."
+    # Terminal-style initial message
+    init_msg = {
+        "uz": f"<b>[SYSTEM]</b> Havolani tahlil qilish tayyorlanmoqda...\n<code>TARGET: {url}</code>",
+        "ru": f"<b>[SYSTEM]</b> Подготовка к анализу ссылки...\n<code>TARGET: {url}</code>",
+        "en": f"<b>[SYSTEM]</b> Preparing link analysis...\n<code>TARGET: {url}</code>"
     }
-    status_msg = await message.answer(progress_msg.get(lang, progress_msg["en"]))
-    result = await scan_url_virustotal(url)
-    
-    user_db = await get_user(message.from_user.id)
-    lang = user_db['language'] if user_db else 'uz'
+    status_msg = await message.answer(init_msg.get(lang, init_msg["en"]), parse_mode="HTML")
 
+    async def progress_update(text):
+        try:
+            # We wrap the update in a code block for terminal feel
+            await status_msg.edit_text(f"<code>{text}</code>", parse_mode="HTML")
+        except:
+            pass
+
+    result = await scan_url_virustotal(url, lang, progress_update)
+    
     if "error" in result:
         await status_msg.edit_text(f"❌ {result['error']}")
     else:
@@ -549,9 +631,16 @@ async def process_link_check(message: types.Message, state: FSMContext):
 @router.message(SecurityStates.waiting_for_file, F.document)
 async def process_file_check(message: types.Message, state: FSMContext):
     document = message.document
+    user_db = await get_user(message.from_user.id)
+    lang = user_db['language'] if user_db else 'uz'
     
     if document.file_size > 20 * 1024 * 1024:
-        await message.reply("⚠️ Fayl juda katta. Maksimum 20MB.")
+        limit_msg = {
+            "uz": "⚠️ Fayl juda katta. Maksimum 20MB.",
+            "ru": "⚠️ Файл слишком большой. Максимум 20МБ.",
+            "en": "⚠️ File too large. Maximum 20MB."
+        }
+        await message.reply(limit_msg.get(lang, limit_msg["en"]))
         return
 
     try:
@@ -559,18 +648,22 @@ async def process_file_check(message: types.Message, state: FSMContext):
     except:
         pass
 
-    progress_msg = {
-        "uz": f"⬇️ Fayl yuklanmoqda: {document.file_name}...",
-        "ru": f"⬇️ Файл загружается: {document.file_name}...",
-        "en": f"⬇️ File downloading: {document.file_name}..."
+    init_msg = {
+        "uz": f"<b>[SYSTEM]</b> Fayl qabul qilindi: <code>{document.file_name}</code>\nInisializatsiya...",
+        "ru": f"<b>[SYSTEM]</b> Файл получен: <code>{document.file_name}</code>\nИнициализация...",
+        "en": f"<b>[SYSTEM]</b> File received: <code>{document.file_name}</code>\nInitializing..."
     }
-    status_msg = await message.answer(progress_msg.get(lang, progress_msg["en"]))
-    
-    user_db = await get_user(message.from_user.id)
-    lang = user_db['language'] if user_db else 'uz'
+    status_msg = await message.answer(init_msg.get(lang, init_msg["en"]), parse_mode="HTML")
 
-    # Download with guard
+    async def progress_update(text):
+        try:
+            await status_msg.edit_text(f"<code>{text}</code>", parse_mode="HTML")
+        except:
+            pass
+
+    # Download
     try:
+        await progress_update("[DL] Transferring to secure buffer...")
         file_id = document.file_id
         file_info = await message.bot.get_file(file_id)
         local_path = f"downloads/{document.file_name}"
@@ -579,28 +672,19 @@ async def process_file_check(message: types.Message, state: FSMContext):
     except Exception as e:
         logger.error(f"Download error: {e}")
         error_msgs = {
-            "uz": "❌ Faylni yuklab olishda xatolik. Iltimos, qaytadan yuboring.",
-            "ru": "❌ Ошибка при загрузке файла. Пожалуйста, отправьте еще раз.",
-            "en": "❌ Download error. Please resend the file."
+            "uz": "❌ Faylni yuklab olishda xatolik.",
+            "ru": "❌ Ошибка при загрузке файла.",
+            "en": "❌ Download error."
         }
         await status_msg.edit_text(error_msgs.get(lang, error_msgs["en"]))
         return
     
-    progress_msg2 = {
-        "uz": f"🔍 Tahlil qilinmoqda: {document.file_name}...",
-        "ru": f"🔍 Анализируется: {document.file_name}...",
-        "en": f"🔍 Analyzing: {document.file_name}..."
-    }
-    await status_msg.edit_text(progress_msg2.get(lang, progress_msg2["en"]))
-    result = await scan_file_virustotal(local_path)
+    result = await scan_file_virustotal(local_path, lang, progress_update)
     
     try:
         os.remove(local_path)
     except:
         pass
-        
-    user_db = await get_user(message.from_user.id)
-    lang = user_db['language'] if user_db else 'uz'
 
     if "error" in result:
         await status_msg.edit_text(f"❌ {result['error']}")
@@ -625,40 +709,63 @@ async def monitor_messages(message: types.Message):
     lang = user_db['language'] if user_db else 'uz'
 
     if message.text and message.text.startswith("http"):
+        # We find all URLs to be safe
+        import re
+        urls = re.findall(r'https?://(?:[-\w.]|(?:%[\da-fA-F]{2}))+', message.text)
+        if not urls: return
+
         mon_msg = {
-            "uz": "🛡 24/7 Monitoring: Tekshirilmoqda...",
-            "ru": "🛡 24/7 Мониторинг: Проверяется...",
-            "en": "🛡 24/7 Monitoring: Checking..."
+            "uz": "🛡 <b>24/7 Monitoring:</b> Havola aniqlandi. Tahlil boshlanmoqda...",
+            "ru": "🛡 <b>24/7 Мониторинг:</b> Найдена ссылка. Начинаю анализ...",
+            "en": "🛡 <b>24/7 Monitoring:</b> Link detected. Starting analysis..."
         }
-        status_msg = await message.reply(mon_msg.get(lang, mon_msg["en"]))
-        result = await scan_url_virustotal(message.text)
-        if "error" in result:
-            await status_msg.edit_text(f"❌ {result['error']}")
-        else:
-            text = format_scan_report(result["stats"], result["link"], lang, AD_PLACEHOLDER_TEXT)
-            await status_msg.edit_text(text, parse_mode="HTML")
+        status_msg = await message.reply(mon_msg.get(lang, mon_msg["en"]), parse_mode="HTML")
+
+        async def progress_update(text):
+            try: await status_msg.edit_text(f"<code>{text}</code>", parse_mode="HTML")
+            except: pass
+
+        for url in urls:
+            result = await scan_url_virustotal(url, lang, progress_update)
+            if "error" in result:
+                await status_msg.edit_text(f"❌ {result['error']}")
+            else:
+                text = format_scan_report(result["stats"], result["link"], lang, AD_PLACEHOLDER_TEXT)
+                await status_msg.edit_text(text, parse_mode="HTML")
     
     elif message.document:
         if message.document.file_size > 20 * 1024 * 1024:
             return
+        
         mon_msg_f = {
-            "uz": "🛡 24/7 Monitoring: Fayl tekshirilmoqda...",
-            "ru": "🛡 24/7 Мониторинг: Файл проверяется...",
-            "en": "🛡 24/7 Monitoring: File checking..."
+            "uz": "🛡 <b>24/7 Monitoring:</b> Fayl aniqlandi. Tahlil boshlanmoqda...",
+            "ru": "🛡 <b>24/7 Мониторинг:</b> Файл обнаружен. Начинаю анализ...",
+            "en": "🛡 <b>24/7 Monitoring:</b> File detected. Starting analysis..."
         }
-        status_msg = await message.reply(mon_msg_f.get(lang, mon_msg_f["en"]))
-        file = await message.bot.get_file(message.document.file_id)
-        local_path = f"downloads/{message.document.file_name}"
-        os.makedirs("downloads", exist_ok=True)
-        await message.bot.download_file(file.file_path, local_path)
-        result = await scan_file_virustotal(local_path)
-        try: os.remove(local_path)
-        except: pass
-        if "error" in result:
-            await status_msg.edit_text(f"❌ {result['error']}")
-        else:
-            text = format_scan_report(result["stats"], result["link"], lang, AD_PLACEHOLDER_TEXT)
-            await status_msg.edit_text(text, parse_mode="HTML")
+        status_msg = await message.reply(mon_msg_f.get(lang, mon_msg_f["en"]), parse_mode="HTML")
+
+        async def progress_update(text):
+            try: await status_msg.edit_text(f"<code>{text}</code>", parse_mode="HTML")
+            except: pass
+
+        try:
+            await progress_update("[DL] Receiving object...")
+            file = await message.bot.get_file(message.document.file_id)
+            local_path = f"downloads/mon_{message.document.file_name}"
+            os.makedirs("downloads", exist_ok=True)
+            await message.bot.download_file(file.file_path, local_path)
+            
+            result = await scan_file_virustotal(local_path, lang, progress_update)
+            try: os.remove(local_path)
+            except: pass
+            
+            if "error" in result:
+                await status_msg.edit_text(f"❌ {result['error']}")
+            else:
+                text = format_scan_report(result["stats"], result["link"], lang, AD_PLACEHOLDER_TEXT)
+                await status_msg.edit_text(text, parse_mode="HTML")
+        except Exception as e:
+            logger.error(f"Monitoring error: {e}")
 
 
 # ── 24/7 Monitoring (Business Connection) ────────────────────────────
@@ -673,18 +780,27 @@ async def business_monitoring(message: types.Message):
         logger.error(f"Business connection error: {e}")
         return
 
+    user_db = await get_user(owner_chat_id)
+    lang = user_db['language'] if user_db else 'uz'
+
     # Process URLs
     if message.text:
         urls = re.findall(r'https?://(?:[-\w.]|(?:%[\da-fA-F]{2}))+', message.text)
         for url in urls:
-            result = await scan_url_virustotal(url)
+            # For business messages, we might not want to flood with status updates, 
+            # but let's provide a final report or a single "Scanning" message.
+            status_msg = await message.bot.send_message(owner_chat_id, f"🛡 <b>[BIZ_MONITOR]</b> Scanning link: <code>{url}</code>", parse_mode="HTML")
+            
+            async def progress_update(text):
+                try: await status_msg.edit_text(f"<code>{text}</code>", parse_mode="HTML")
+                except: pass
+
+            result = await scan_url_virustotal(url, lang, progress_update)
             if "error" in result:
-                await message.bot.send_message(owner_chat_id, f"⚠️ {result['error']} ({url})")
+                await status_msg.edit_text(f"⚠️ {result['error']} ({url})")
             else:
-                user_db = await get_user(owner_chat_id)
-                lang = user_db['language'] if user_db else 'uz'
                 text = format_scan_report(result["stats"], result["link"], lang, AD_PLACEHOLDER_TEXT)
-                await message.bot.send_message(owner_chat_id, text, parse_mode="HTML")
+                await status_msg.edit_text(text, parse_mode="HTML")
 
     # Process Document
     if message.document:
@@ -694,25 +810,29 @@ async def business_monitoring(message: types.Message):
         else:
             try:
                 mon_msg_b = {
-                    "uz": f"⏳ Tekshirilmoqda: {doc.file_name}...",
-                    "ru": f"⏳ Проверяется: {doc.file_name}...",
-                    "en": f"⏳ Scanning: {doc.file_name}..."
+                    "uz": f"🛡 <b>[BIZ_MONITOR]</b> Fayl aniqlandi: <code>{doc.file_name}</code>",
+                    "ru": f"🛡 <b>[BIZ_MONITOR]</b> Файл обнаружен: <code>{doc.file_name}</code>",
+                    "en": f"🛡 <b>[BIZ_MONITOR]</b> File detected: <code>{doc.file_name}</code>"
                 }
-                status_msg = await message.bot.send_message(owner_chat_id, mon_msg_b.get(lang, mon_msg_b["en"]))
+                status_msg = await message.bot.send_message(owner_chat_id, mon_msg_b.get(lang, mon_msg_b["en"]), parse_mode="HTML")
+                
+                async def progress_update(text):
+                    try: await status_msg.edit_text(f"<code>{text}</code>", parse_mode="HTML")
+                    except: pass
+                
+                await progress_update("[DL] Transferring...")
                 file_info = await message.bot.get_file(doc.file_id)
                 local_path = f"downloads/biz_{doc.file_name}"
                 os.makedirs("downloads", exist_ok=True)
                 await message.bot.download_file(file_info.file_path, local_path)
                 
-                result = await scan_file_virustotal(local_path)
+                result = await scan_file_virustotal(local_path, lang, progress_update)
                 try: os.remove(local_path)
                 except: pass
                 
                 if "error" in result:
                     await status_msg.edit_text(f"❌ {result['error']}")
                 else:
-                    user_db = await get_user(owner_chat_id)
-                    lang = user_db['language'] if user_db else 'uz'
                     text = format_scan_report(result["stats"], result["link"], lang, AD_PLACEHOLDER_TEXT)
                     await status_msg.edit_text(text, parse_mode="HTML")
             except Exception as e:
