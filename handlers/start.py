@@ -16,6 +16,7 @@ async def cmd_start(message: types.Message, state: FSMContext):
     Checks if user is already registered.
     Handles Referral Deep Links.
     """
+    logger.info(f"Received /start from user {message.from_user.id}")
     user_id = message.from_user.id
     valid_referrer_id = None
     
