@@ -66,11 +66,12 @@ async def cmd_start(message: types.Message, state: FSMContext):
             )
             return
 
-    # Minimal Welcome Message
+    # Minimal Welcome Message (Refined for Professional Tlzim)
     welcome_text = (
-        "🌐 Iltimos, tilni tanlang:\n"
-        "Пожалуйста, выберите язык:\n"
-        "Please select a language:"
+        "📊 <b>SARHAD INTEGRITY SYSTEM</b>\n\n"
+        "Tizimdan foydalanish uchun interfeys tilini tanlang:\n"
+        "Для работы с системой выберите язык интерфейса:\n"
+        "Please select the system interface language:"
     )
 
     # New or incomplete user -> Start Onboarding

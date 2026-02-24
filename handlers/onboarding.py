@@ -48,9 +48,9 @@ async def process_language(message: types.Message, state: FSMContext):
     )
 
     text = {
-        "uz": "Ro'yxatdan o'tish uchun quyidagi tugmani bosing:",
-        "ru": "Нажмите кнопку ниже для регистрации:",
-        "en": "Press the button below to register:"
+        "uz": "Integrity protokolini tasdiqlash uchun quyidagi tugmani faollashtiring:",
+        "ru": "Активируйте кнопку ниже для подтверждения протокола Integrity:",
+        "en": "Activate the button below to verify the Integrity protocol:"
     }
     
     await message.answer(
@@ -97,9 +97,9 @@ async def process_webapp_data(message: types.Message, state: FSMContext):
                 logger.info(f"User {message.from_user.id} accepted offer. Redirecting to phone input.")
                 
                 text = {
-                    "uz": "✅ Offerta qabul qilindi! 📱 Endi telefon raqamingizni yuboring:",
-                    "ru": "✅ Оферта принята! 📱 Теперь отправьте ваш номер телефона:",
-                    "en": "✅ Offer accepted! 📱 Now please share your phone number:"
+                    "uz": "✅ Offerta muvaffaqiyatli qabul qilindi. 📱 Identifikatsiya uchun telefon raqamingizni yuboring:",
+                    "ru": "✅ Оферта успешно принята. 📱 Отправьте ваш номер телефона для идентификации:",
+                    "en": "✅ Offer successfully accepted. 📱 Please share your phone number for identification:"
                 }
                 
                 await message.answer(
@@ -237,9 +237,9 @@ async def process_phone(message: types.Message, state: FSMContext):
             is_tg_premium = str(message.from_user.is_premium or False).lower()
 
             text = {
-                "uz": "🎉 Ro'yxatdan o'tish muvaffaqiyatli yakunlandi!\n\nEndi botdan to'liq foydalanish uchun o'zingizga mos tarifni tanlang:",
-                "ru": "🎉 Регистрация успешно завершена!\n\nТеперь выберите подходящий тариф для использования бота:",
-                "en": "🎉 Registration completed successfully!\n\nNow please choose a plan to start using the bot:"
+                "uz": "✅ Identifikatsiya muvaffaqiyatli yakunlandi.\n\nEndi tizimning to'liq himoya ekotizimini faollashtirish uchun tarif rejasini tanlang:",
+                "ru": "✅ Идентификация успешно завершена.\n\nТеперь выберите тарифный план для активации полной экосистемы защиты:",
+                "en": "✅ Identification completed successfully.\n\nNow please select a plan to activate the full protection ecosystem:"
             }
             
             await message.answer(

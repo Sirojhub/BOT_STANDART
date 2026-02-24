@@ -37,41 +37,41 @@ async def cmd_profile(message: types.Message):
     
     ref_count = await get_referral_count(user_id)
     plan_name = {
-        "uz": "Premium ✨" if is_premium else "Bepul 🆓",
-        "ru": "Премиум ✨" if is_premium else "Бесплатный 🆓",
-        "en": "Premium ✨" if is_premium else "Free 🆓"
+        "uz": "Integrity Pro ✨" if is_premium else "Bazaviy Standart 🆓",
+        "ru": "Integrity Pro ✨" if is_premium else "Базовый Стандарт 🆓",
+        "en": "Integrity Pro ✨" if is_premium else "Basic Standard 🆓"
     }
 
     text = {
         "uz": (
-            f"👤 <b>Mening Profilim</b>\n\n"
-            f"ID: <code>{user_id}</code>\n"
-            f"Ism: <b>{full_name}</b>\n"
-            f"Telefon: <code>{phone}</code>\n\n"
-            f"💎 Tarif: <b>{plan_name['uz']}</b>\n"
-            f"💰 Balans: <b>{user['referral_balance']} UZS</b>\n"
-            f"👥 Takliflar: <b>{ref_count} ta</b>\n"
-            f"📅 Ro'yxatdan o'tgan sana: <b>{reg_date}</b>"
+            f"👤 <b>Shaxsiy Kabinet</b>\n\n"
+            f"Identifikator: <code>{user_id}</code>\n"
+            f"Foydalanuvchi: <b>{full_name}</b>\n"
+            f"Aloqa: <code>{phone}</code>\n\n"
+            f"💎 Xizmat darajasi: <b>{plan_name['uz']}</b>\n"
+            f"💰 Depozit: <b>{user['referral_balance']} UZS</b>\n"
+            f"👥 Hamkorlar: <b>{ref_count} ta</b>\n"
+            f"📅 Faollashtirilgan sana: <b>{reg_date}</b>"
         ),
         "ru": (
-            f"👤 <b>Мой Профиль</b>\n\n"
-            f"ID: <code>{user_id}</code>\n"
-            f"Имя: <b>{full_name}</b>\n"
-            f"Телефон: <code>{phone}</code>\n\n"
-            f"💎 Тариф: <b>{plan_name['ru']}</b>\n"
-            f"💰 Баланс: <b>{user['referral_balance']} СУМ</b>\n"
-            f"👥 Приглашено: <b>{ref_count}</b>\n"
-            f"📅 Дата регистрации: <b>{reg_date}</b>"
+            f"👤 <b>Личный Кабинет</b>\n\n"
+            f"Идентификатор: <code>{user_id}</code>\n"
+            f"Пользователь: <b>{full_name}</b>\n"
+            f"Связь: <code>{phone}</code>\n\n"
+            f"💎 Уровень сервиса: <b>{plan_name['ru']}</b>\n"
+            f"💰 Депозит: <b>{user['referral_balance']} СУМ</b>\n"
+            f"👥 Партнеры: <b>{ref_count}</b>\n"
+            f"📅 Дата активации: <b>{reg_date}</b>"
         ),
         "en": (
-            f"👤 <b>My Profile</b>\n\n"
-            f"ID: <code>{user_id}</code>\n"
-            f"Name: <b>{full_name}</b>\n"
-            f"Phone: <code>{phone}</code>\n\n"
-            f"💎 Plan: <b>{plan_name['en']}</b>\n"
-            f"💰 Balance: <b>{user['referral_balance']} UZS</b>\n"
-            f"👥 Referrals: <b>{ref_count}</b>\n"
-            f"📅 Registered: <b>{reg_date}</b>"
+            f"👤 <b>Personal Cabinet</b>\n\n"
+            f"Identifier: <code>{user_id}</code>\n"
+            f"Subscriber: <b>{full_name}</b>\n"
+            f"Contact: <code>{phone}</code>\n\n"
+            f"💎 Service Level: <b>{plan_name['en']}</b>\n"
+            f"💰 Deposit: <b>{user['referral_balance']} UZS</b>\n"
+            f"👥 Partners: <b>{ref_count}</b>\n"
+            f"📅 Activation Date: <b>{reg_date}</b>"
         )
     }
     
@@ -84,9 +84,9 @@ async def cmd_settings(message: types.Message):
     lang = user['language'] if user else "uz"
     
     text = {
-        "uz": "⚙️ <b>Sozlamalar bo'limi</b>\n\nBu yerda bot tilini o'zgartirishingiz mumkin:",
-        "ru": "⚙️ <b>Раздел настроек</b>\n\nЗдесь вы можете изменить язык бота:",
-        "en": "⚙️ <b>Settings section</b>\n\nHere you can change the bot language:"
+        "uz": "⚙️ <b>Konfiguratsiya boshqaruvi</b>\n\nInterfeys tilini optimallashtirish uchun tanlovni amalga oshiring:",
+        "ru": "⚙️ <b>Управление конфигурацией</b>\n\nСделайте выбор для оптимизации языка интерфейса:",
+        "en": "⚙️ <b>Configuration Management</b>\n\nSelect a language to optimize the interface:"
     }
     
     await message.answer(text.get(lang, text["en"]), reply_markup=get_settings_keyboard(lang), parse_mode="HTML")

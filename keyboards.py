@@ -51,13 +51,13 @@ def get_main_menu_keyboard(language="en", is_premium=False):
     """
     Returns the main menu keyboard based on language and premium status.
     """
-    btn_link = {"uz": "🔗 Havolani tekshirish", "ru": "🔗 Проверка ссылки", "en": "🔗 Link Check"}
-    btn_file = {"uz": "📂 Faylni tekshirish", "ru": "📂 Проверка файла", "en": "📂 File Check"}
-    btn_app = {"uz": "🛡 Himoya ilovasini faollashtirish", "ru": "🛡 Активировать защиту", "en": "🛡 Activate Protection App"}
+    btn_link = {"uz": "🔗 Havola Auditi", "ru": "🔗 Аудит ссылки", "en": "🔗 Link Audit"}
+    btn_file = {"uz": "📂 Fayl Xavfsizligi", "ru": "📂 Безопасность файла", "en": "📂 File Security Audit"}
+    btn_app = {"uz": "🛡 Himoya Ekotizimi", "ru": "🛡 Экосистема защиты", "en": "🛡 Protection Ecosystem"}
     btn_monitoring = {"uz": "✨ 24/7 Monitoring", "ru": "✨ 24/7 Мониторинг", "en": "✨ 24/7 Monitoring"}
-    btn_invite = {"uz": "👥 Do'stlarni taklif qilish", "ru": "👥 Пригласить друзей", "en": "👥 Invite Friends"}
-    btn_profile = {"uz": "👤 Men haqimda", "ru": "👤 Обо мне", "en": "👤 About Me"}
-    btn_settings = {"uz": "⚙️ Sozlamalar", "ru": "⚙️ Настройки", "en": "⚙️ Settings"}
+    btn_invite = {"uz": "👥 Hamkorlik Dasturi", "ru": "👥 Партнерская программа", "en": "👥 Partnership Program"}
+    btn_profile = {"uz": "👤 Shaxsiy Kabinet", "ru": "👤 Личный кабинет", "en": "👤 Personal Account"}
+    btn_settings = {"uz": "⚙️ Konfiguratsiya", "ru": "⚙️ Конфигурация", "en": "⚙️ Configuration"}
 
     rows = [
         [KeyboardButton(text=btn_link.get(language, "en")), KeyboardButton(text=btn_file.get(language, "en"))]

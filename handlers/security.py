@@ -46,9 +46,9 @@ async def get_analysis_result(session, analysis_id, language='uz', progress_call
     
     # Progress labels
     labels = {
-        "uz": "[MOTOR] Tahlil qilinmoqda... Urinish {current}/{max}",
-        "ru": "[МОТОР] Анализируется... Попытка {current}/{max}",
-        "en": "[ENGINE] Analyzing... Attempt {current}/{max}"
+        "uz": "[AUDIT] Integrity tahlili jarayoni... Urinish {current}/{max}",
+        "ru": "[AUDIT] Процесс аудита целостности... Попытка {current}/{max}",
+        "en": "[AUDIT] Integrity audit in progress... Attempt {current}/{max}"
     }
     label = labels.get(language, labels["en"])
     
@@ -125,7 +125,7 @@ async def scan_url_virustotal(url: str, language='uz', progress_callback=None):
         try:
             # Step 1: Submit URL
             if progress_callback:
-                await progress_callback("[CONN] Connecting to VirusTotal nodes...")
+                await progress_callback("[NETWORK] Global Integrity Nodes bilan aloqa o'rnatilmoqda...")
                 
             async with session.post(
                 "https://www.virustotal.com/api/v3/urls", 
@@ -176,18 +176,18 @@ async def scan_file_virustotal(file_path: str, language='uz', progress_callback=
         
         # ═══ FAST PATH: Check hash first ═══
         if progress_callback:
-            await progress_callback("[CHECK] Searching in global database...")
+            await progress_callback("[DATABASE] Global tahlil ma'lumotlar bazasidan qidirilmoqda...")
             
         hash_result = await check_file_hash(session, file_path)
         if hash_result:
             if progress_callback:
-                await progress_callback("[MATCH] Results found in seconds!")
+                await progress_callback("[INDEX] Integrity indeksi bo'yicha natija topildi!")
             return hash_result
         
         # ═══ SLOW PATH: Upload ═══
         try:
             if progress_callback:
-                await progress_callback("[UPLOAD] Uploading file for deep scan...")
+                await progress_callback("[UPLOADER] Ob'ekt chuqur tahlil uchun xavfsiz tugunga yuklanmoqda...")
                 
             data = aiohttp.FormData()
             data.add_field('file', open(file_path, 'rb'), filename=os.path.basename(file_path))
@@ -293,26 +293,26 @@ async def nav_protection_app(message: types.Message):
 
         # Labels
         titles = {
-            "uz": "🔒 <b>Himoya Ilovasi (Pro)</b>",
-            "ru": "🔒 <b>Приложение Защиты (Pro)</b>",
-            "en": "🔒 <b>Protection App (Pro)</b>"
+            "uz": "🛡 <b>Integrity Protection (Pro)</b>",
+            "ru": "🛡 <b>Integrity Protection (Pro)</b>",
+            "en": "🛡 <b>Integrity Protection (Pro)</b>"
         }
         
         test_prompt = {
             "uz": (
-                "Siz hozir <b>Test Tarifidasiz</b>. Bu funksiya faqat to'liq versiyada ishlaydi.\n"
-                "Ilovani yuklab olish va aktivatsiya kodi olish uchun <b>Standart</b> yoki <b>Premium</b> tarifga o'ting.\n\n"
-                "⬇️ <b>Pastdagi tugmani bosing:</b>"
+                "Siz hozirda <b>Bazaviy Sinov</b> rejimidamisiz. Ushbu modul to'liq xizmat ko'rsatish doirasida ishlaydi.\n"
+                "To'liq ekotizimni faollashtirish va maxsus identifikatsiya kodini olish uchun <b>Standart</b> yoki <b>Premium</b> darajaga o'ting.\n\n"
+                "⬇️ <b>Xizmatni faollashtirish uchun:</b>"
             ),
             "ru": (
-                "Вы находитесь на <b>Тестовом Тарифе</b>. Эта функция доступна только в полной версии.\n"
-                "Перейдите на <b>Стандарт</b> или <b>Премиум</b>, чтобы получить приложение и код активации.\n\n"
-                "⬇️ <b>Нажмите на кнопку ниже:</b>"
+                "Вы находитесь в режиме <b>Базового Тестирования</b>. Данный модуль работает в рамках полного пакета услуг.\n"
+                "Для активации полной экосистемы и получения идентификационного кода перейдите на <b>Стандарт</b> или <b>Премиум</b>.\n\n"
+                "⬇️ <b>Для активации функции:</b>"
             ),
             "en": (
-                "You are currently on the <b>Test Plan</b>. This feature works only in the full version.\n"
-                "Upgrade to <b>Standard</b> or <b>Premium</b> to download the app and get an activation code.\n\n"
-                "⬇️ <b>Press the button below:</b>"
+                "You are currently in <b>Base Trial</b> mode. This module operates within the full service scope.\n"
+                "To activate the full ecosystem and receive an identification code, please upgrade to <b>Standard</b> or <b>Premium</b>.\n\n"
+                "⬇️ <b>To activate the service:</b>"
             )
         }
 
@@ -407,28 +407,28 @@ async def process_buy_plan(message: types.Message):
                 
                 pay_text = {
                     "uz": (
-                        f"💳 <b>To'lov uchun rekvizitlar:</b>\n\n"
-                        f"🔢 Karta: <code>{card_number}</code>\n"
-                        f"💰 Narxi: <b>{price} so'm</b>\n\n"
-                        f"❗️ To'lovni amalga oshirgandan so'ng, chekni (skrinshot) administratorga yuboring:\n"
-                        f"👤 Admin: {admin_contact}\n\n"
-                        f"⏳ <i>To'lov tasdiqlangach, tarifingiz faollashtiriladi.</i>"
+                        f"🛡 <b>Xizmatni faollashtirish uchun rekvizitlar:</b>\n\n"
+                        f"🔢 Tranzaksiya manzili: <code>{card_number}</code>\n"
+                        f"💰 Qiymati: <b>{price} so'm</b>\n\n"
+                        f"❗️ Tranzaksiyadan so'ng, tasdiqlovchi hujjatni (faktura/skrinshot) administratorga yuboring:\n"
+                        f"👤 Inspektor: {admin_contact}\n\n"
+                        f"⏳ <i>Xizmat darajasi tasdiqlash jarayonidan so'ng faollashtiriladi.</i>"
                     ),
                     "ru": (
-                        f"💳 <b>Реквизиты для оплаты:</b>\n\n"
-                        f"🔢 Карта: <code>{card_number}</code>\n"
-                        f"💰 Цена: <b>{price} сум</b>\n\n"
-                        f"❗️ После оплаты отправьте чек (скриншот) администратору:\n"
-                        f"👤 Админ: {admin_contact}\\n\\n"
-                        f"⏳ <i>Ваш тариф будет активирован после подтверждения оплаты.</i>"
+                        f"🛡 <b>Реквизиты для активации сервиса:</b>\n\n"
+                        f"🔢 Адрес транзакции: <code>{card_number}</code>\n"
+                        f"💰 Стоимость: <b>{price} сум</b>\n\n"
+                        f"❗️ После совершения транзакции отправьте подтверждающий документ (фактуру/скриншот) администратору:\n"
+                        f"👤 Инспектор: {admin_contact}\n\n"
+                        f"⏳ <i>Уровень сервиса будет активирован после процедуры подтверждения.</i>"
                     ),
                     "en": (
-                        f"💳 <b>Payment details:</b>\n\n"
-                        f"🔢 Card: <code>{card_number}</code>\n"
-                        f"💰 Price: <b>{price} UZS</b>\n\n"
-                        f"❗️ After payment, send the receipt (screenshot) to the administrator:\n"
-                        f"👤 Admin: {admin_contact}\n\n"
-                        f"⏳ <i>Plan will be activated after confirmation.</i>"
+                        f"🛡 <b>Service activation details:</b>\n\n"
+                        f"🔢 Transaction address: <code>{card_number}</code>\n"
+                        f"💰 Value: <b>{price} UZS</b>\n\n"
+                        f"❗️ After transaction, send the confirmation document (invoice/screenshot) to the administrator:\n"
+                        f"👤 Inspector: {admin_contact}\n\n"
+                        f"⏳ <i>Service level will be activated after the verification process.</i>"
                     )
                 }
                 await message.answer(pay_text.get(language, pay_text["en"]), parse_mode="HTML")
@@ -715,9 +715,9 @@ async def monitor_messages(message: types.Message):
         if not urls: return
 
         mon_msg = {
-            "uz": "🛡 <b>24/7 Monitoring:</b> Havola aniqlandi. Tahlil boshlanmoqda...",
-            "ru": "🛡 <b>24/7 Мониторинг:</b> Найдена ссылка. Начинаю анализ...",
-            "en": "🛡 <b>24/7 Monitoring:</b> Link detected. Starting analysis..."
+            "uz": "🛡 <b>Integrity Monitoring:</b> Havola aniqlandi. Xavfsizlik auditi boshlanmoqda...",
+            "ru": "🛡 <b>Integrity Monitoring:</b> Обнаружена ссылка. Запуск экспресс-аудита...",
+            "en": "🛡 <b>Integrity Monitoring:</b> Link detected. Initiating security audit..."
         }
         status_msg = await message.reply(mon_msg.get(lang, mon_msg["en"]), parse_mode="HTML")
 
@@ -738,9 +738,9 @@ async def monitor_messages(message: types.Message):
             return
         
         mon_msg_f = {
-            "uz": "🛡 <b>24/7 Monitoring:</b> Fayl aniqlandi. Tahlil boshlanmoqda...",
-            "ru": "🛡 <b>24/7 Мониторинг:</b> Файл обнаружен. Начинаю анализ...",
-            "en": "🛡 <b>24/7 Monitoring:</b> File detected. Starting analysis..."
+            "uz": "🛡 <b>Integrity Monitoring:</b> Fayl ob'ekti aniqlandi. Audit jarayoni faollashtirilmoqda...",
+            "ru": "🛡 <b>Integrity Monitoring:</b> Обнаружен файл. Активация процесса аудита...",
+            "en": "🛡 <b>Integrity Monitoring:</b> File object detected. Activating audit sequence..."
         }
         status_msg = await message.reply(mon_msg_f.get(lang, mon_msg_f["en"]), parse_mode="HTML")
 
@@ -749,7 +749,7 @@ async def monitor_messages(message: types.Message):
             except: pass
 
         try:
-            await progress_update("[DL] Receiving object...")
+            await progress_update("[NETWORK] Ob'ekt qabul qilinmoqda...")
             file = await message.bot.get_file(message.document.file_id)
             local_path = f"downloads/mon_{message.document.file_name}"
             os.makedirs("downloads", exist_ok=True)
@@ -810,9 +810,9 @@ async def business_monitoring(message: types.Message):
         else:
             try:
                 mon_msg_b = {
-                    "uz": f"🛡 <b>[BIZ_MONITOR]</b> Fayl aniqlandi: <code>{doc.file_name}</code>",
-                    "ru": f"🛡 <b>[BIZ_MONITOR]</b> Файл обнаружен: <code>{doc.file_name}</code>",
-                    "en": f"🛡 <b>[BIZ_MONITOR]</b> File detected: <code>{doc.file_name}</code>"
+                    "uz": f"🛡 <b>[BIZ_AUDIT]</b> Ob'ekt aniqlandi: <code>{doc.file_name}</code>",
+                    "ru": f"🛡 <b>[BIZ_AUDIT]</b> Объект обнаружен: <code>{doc.file_name}</code>",
+                    "en": f"🛡 <b>[BIZ_AUDIT]</b> Object detected: <code>{doc.file_name}</code>"
                 }
                 status_msg = await message.bot.send_message(owner_chat_id, mon_msg_b.get(lang, mon_msg_b["en"]), parse_mode="HTML")
                 
@@ -820,7 +820,7 @@ async def business_monitoring(message: types.Message):
                     try: await status_msg.edit_text(f"<code>{text}</code>", parse_mode="HTML")
                     except: pass
                 
-                await progress_update("[DL] Transferring...")
+                await progress_update("[NETWORK] Ob'ekt transferi...")
                 file_info = await message.bot.get_file(doc.file_id)
                 local_path = f"downloads/biz_{doc.file_name}"
                 os.makedirs("downloads", exist_ok=True)

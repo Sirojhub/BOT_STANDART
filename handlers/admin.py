@@ -129,9 +129,9 @@ async def cmd_approve(message: types.Message):
         try:
             await message.bot.send_message(
                 target_user_id,
-                "✅ <b>Tabriklaymiz! Sizning to'lovingiz tasdiqlandi.</b>\n\n"
-                "Premium akkaunt faollashtirildi. Barcha cheklovlar olib tashlandi.\n"
-                "Admin bilan bog'lanish: @GvardAdmin",
+                "✅ <b>Integrity Pro xizmati faollashtirildi.</b>\n\n"
+                "Sizning tranzaksiyangiz muvaffaqiyatli tasdiqlandi. Barcha operatsion cheklovlar olib tashlandi.\n"
+                "Texnik yordam: @GvardAdmin",
                 parse_mode="HTML"
             )
         except Exception:

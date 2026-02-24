@@ -9,11 +9,50 @@ def format_scan_report(stats: dict, link: str, language: str = 'uz', ad_text: st
     suspicious = int(stats.get('suspicious', 0))
     undetected = int(stats.get('undetected', 0))
     
-    # Status Icons/Titles
+    # Status Icons/Titles (Refined by Cyber-Security Law Expert)
     status_map = {
-        "uz": {"mal": "🚨 XAVFLI", "susp": "⚠️ SHUBHALI", "safe": "✅ XAVFSIZ (Tozalangan)", "title": "🔒 Xavfsizlik tekshiruvi natijasi", "file": "📎 Fayl/Havola", "res": "📊 Natija", "h": "🟢 Xavfsiz", "m": "🔴 Zararli", "s": "🟠 Shubheli", "u": "⚪️ Aniqlanmagan", "det": "🔗 Batafsil hisobot", "dis": "⚖️ Mas'uliyatni rad etish: Natijalar 100% kafolat bermaydi."},
-        "ru": {"mal": "🚨 ОПАСНО", "susp": "⚠️ ПОДОЗРИТЕЛЬНО", "safe": "✅ БЕЗОПАСНО (Проверено)", "title": "🔒 Результат проверки безопасности", "file": "📎 Файл/Ссылка", "res": "📊 Результат", "h": "🟢 Безопасно", "m": "🔴 Вредоносно", "s": "🟠 Подозрительно", "u": "⚪️ Не определено", "det": "🔗 Детальный отчет", "dis": "⚖️ Отказ от ответственности: Результаты не гарантируют 100% точность."},
-        "en": {"mal": "🚨 DANGEROUS", "susp": "⚠️ SUSPICIOUS", "safe": "✅ SAFE (Verified Clean)", "title": "🔒 Security Scan Result", "file": "📎 File/Link", "res": "📊 Result", "h": "🟢 Safe", "m": "🔴 Malicious", "s": "🟠 Suspicious", "u": "⚪️ Undetected", "det": "🔗 Detailed report", "dis": "⚖️ Disclaimer: Results are based on VT and do not guarantee 100% safety."}
+        "uz": {
+            "mal": "🚨 XAVF ANIQLANDI", 
+            "susp": "⚠️ SHUBHALI OB'EKT", 
+            "safe": "✅ INTEGRITY TASDIQLANDI (Toza)", 
+            "title": "🛡 Tizim Integrity Hisoboti", 
+            "file": "📎 Tahlil ob'ekti", 
+            "res": "📊 Audit xulosasi", 
+            "h": "🟢 Xavfsiz", 
+            "m": "🔴 Zararli", 
+            "s": "🟠 Shubheli", 
+            "u": "⚪️ Noma'lum", 
+            "det": "🔗 To'liq texnik hisobot", 
+            "dis": "⚖️ Huquqiy eslatma: Ushbu tahlil global xavfsizlik protokollari asosida shakllantirilgan bo'lib, axborot daxlsizligini ta'minlash va operatsion xavfni minimallashtirish uchun xizmat qiladi."
+        },
+        "ru": {
+            "mal": "🚨 ОБНАРУЖЕНА УГРОЗА", 
+            "susp": "⚠️ ПОДОЗРИТЕЛЬНЫЙ ОБЪЕКТ", 
+            "safe": "✅ ЦЕЛОСТНОСТЬ ПОДТВЕРЖДЕНА (Чисто)", 
+            "title": "🛡 Отчет о целостности системы", 
+            "file": "📎 Объект анализа", 
+            "res": "📊 Аудит-заключение", 
+            "h": "🟢 Безопасно", 
+            "m": "🔴 Вредоносно", 
+            "s": "🟠 Подозрительно", 
+            "u": "⚪️ Не определено", 
+            "det": "🔗 Полный технический отчет", 
+            "dis": "⚖️ Юридическое уведомление: Данный экспертный анализ сформирован на основе глобальных протоколов безопасности и служит для обеспечения конфиденциальности и минимизации технологических рисков."
+        },
+        "en": {
+            "mal": "🚨 THREAT DETECTED", 
+            "susp": "⚠️ SUSPICIOUS OBJECT", 
+            "safe": "✅ INTEGRITY VERIFIED (Clean)", 
+            "title": "🛡 System Integrity Report", 
+            "file": "📎 Analysis Object", 
+            "res": "📊 Audit Conclusion", 
+            "h": "🟢 Safe", 
+            "m": "🔴 Malicious", 
+            "s": "🟠 Suspicious", 
+            "u": "⚪️ Undetected", 
+            "det": "🔗 Full technical report", 
+            "dis": "⚖️ Legal Notice: This expert analysis is generated based on global security protocols and serves to ensure data integrity and mitigate technical operational risks."
+        }
     }
     
     t = status_map.get(language, status_map["en"])
