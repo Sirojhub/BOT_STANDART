@@ -270,7 +270,14 @@ async def nav_protection_app(message: types.Message):
             parse_mode="HTML"
         )
     else:
-        await message.answer("⚠️ Ma'lumotlarni yuklashda xatolik bo'ldi.")
+        error_msg = {
+            "uz": "⚠️ Ma'lumotlarni yuklashda xatolik bo'ldi.",
+            "ru": "⚠️ Ошибка загрузки данных.",
+            "en": "⚠️ Error loading data."
+        }
+        user = await get_user(user_id)
+        lang = user['language'] if user else "uz"
+        await message.answer(error_msg.get(lang, error_msg["en"]))
 
 
 @router.message(F.web_app_data)
@@ -283,7 +290,14 @@ async def process_buy_plan(message: types.Message):
             stats = await get_user_pricing_info(user_id)
             
             if not stats:
-                await message.answer("❌ Xatolik yuz berdi.")
+                error_msg = {
+                    "uz": "❌ Xatolik yuz berdi.",
+                    "ru": "❌ Произошла ошибка.",
+                    "en": "❌ An error occurred."
+                }
+                user_info = await get_user(user_id)
+                lang = user_info['language'] if user_info else "uz"
+                await message.answer(error_msg.get(lang, error_msg["en"]))
                 return
 
             # Fetch user language for consistent UI
@@ -294,61 +308,99 @@ async def process_buy_plan(message: types.Message):
             
             if plan == "test":
                 if stats['test_used']:
-                    await message.answer("⚠️ Siz allaqachon bepul sinov davridan foydalangansiz.")
+                    test_used_msg = {
+                        "uz": "⚠️ Siz allaqachon bepul sinov davridan foydalangansiz.",
+                        "ru": "⚠️ Вы уже использовали бесплатный пробный период.",
+                        "en": "⚠️ You have already used the free trial period."
+                    }
+                    await message.answer(test_used_msg.get(language, test_used_msg["en"]))
                 else:
                     await set_test_used(user_id)
+                    success_msg = {
+                        "uz": "✅ <b>TABRIKLAYMIZ!</b>\n\nSizning 24 soatlik sinov davringiz faollashtirildi. Barcha cheklovlar olib tashlandi.",
+                        "ru": "✅ <b>ПОЗДРАВЛЯЕМ!</b>\n\nВаш 24-часовой пробный период активирован. Все ограничения сняты.",
+                        "en": "✅ <b>CONGRATULATIONS!</b>\n\nYour 24-hour trial period has been activated. All restrictions have been removed."
+                    }
                     await message.answer(
-                        "✅ <b>TABRIKLAYMIZ!</b>\n\nSizning 24 soatlik sinov davringiz faollashtirildi. Barcha cheklovlar olib tashlandi.", 
+                        success_msg.get(language, success_msg["en"]), 
                         parse_mode="HTML",
                         reply_markup=get_main_menu_keyboard(language, is_premium=True)
                     )
 
             elif plan == "standard":
                 price = 8000
-                # Manual Payment Flow
                 card_number = "0000 0000 0000 0000"
                 admin_contact = "@admin"
                 
-                await message.answer(
-                    f"💳 <b>To'lov uchun rekvizitlar:</b>\n\n"
-                    f"🔢 Karta: <code>{card_number}</code>\n"
-                    f"💰 Narxi: <b>{price} so'm</b>\n\n"
-                    f"❗️ To'lovni amalga oshirgandan so'ng, chekni (skrinshot) administratorga yuboring:\n"
-                    f"👤 Admin: {admin_contact}\n\n"
-                    f"⏳ <i>To'lov tasdiqlangach, tarifingiz faollashtiriladi.</i>\n\n"
-                    f"💳 <b>Реквизиты для оплаты:</b>\n\n"
-                    f"🔢 Карта: <code>{card_number}</code>\n"
-                    f"💰 Цена: <b>{price} сум</b>\n\n"
-                    f"❗️ После оплаты отправьте чек (скриншот) администратору:\n"
-                    f"👤 Админ: {admin_contact}",
-                    parse_mode="HTML"
-                )
+                pay_text = {
+                    "uz": (
+                        f"💳 <b>To'lov uchun rekvizitlar:</b>\n\n"
+                        f"🔢 Karta: <code>{card_number}</code>\n"
+                        f"💰 Narxi: <b>{price} so'm</b>\n\n"
+                        f"❗️ To'lovni amalga oshirgandan so'ng, chekni (skrinshot) administratorga yuboring:\n"
+                        f"👤 Admin: {admin_contact}\n\n"
+                        f"⏳ <i>To'lov tasdiqlangach, tarifingiz faollashtiriladi.</i>"
+                    ),
+                    "ru": (
+                        f"💳 <b>Реквизиты для оплаты:</b>\n\n"
+                        f"🔢 Карта: <code>{card_number}</code>\n"
+                        f"💰 Цена: <b>{price} сум</b>\n\n"
+                        f"❗️ После оплаты отправьте чек (скриншот) администратору:\n"
+                        f"👤 Админ: {admin_contact}\n\n"
+                        f"⏳ <i>Ваш тариф будет активирован после подтверждения оплаты.</i>"
+                    ),
+                    "en": (
+                        f"💳 <b>Payment details:</b>\n\n"
+                        f"🔢 Card: <code>{card_number}</code>\n"
+                        f"💰 Price: <b>{price} UZS</b>\n\n"
+                        f"❗️ After payment, send the receipt (screenshot) to the administrator:\n"
+                        f"👤 Admin: {admin_contact}\n\n"
+                        f"⏳ <i>Plan will be activated after confirmation.</i>"
+                    )
+                }
+                await message.answer(pay_text.get(language, pay_text["en"]), parse_mode="HTML")
 
             elif plan == "premium":
                 price = 20000
-                # Check TG Premium requirement
                 if not message.from_user.is_premium:
-                     await message.answer("🔒 Bu tarif faqat Telegram Premium egalari uchun.")
+                     prem_req = {
+                         "uz": "🔒 Bu tarif faqat Telegram Premium egalari uchun.",
+                         "ru": "🔒 Этот тариф только для владельцев Telegram Premium.",
+                         "en": "🔒 This plan is for Telegram Premium users only."
+                     }
+                     await message.answer(prem_req.get(language, prem_req["en"]))
                      return
                      
-                # Manual Payment Flow
                 card_number = "0000 0000 0000 0000"
                 admin_contact = "@admin"
                 
-                await message.answer(
-                    f"💳 <b>To'lov uchun rekvizitlar (Premium):</b>\n\n"
-                    f"🔢 Karta: <code>{card_number}</code>\n"
-                    f"💰 Narxi: <b>{price} so'm</b>\n\n"
-                    f"❗️ To'lovni amalga oshirgandan so'ng, chekni (skrinshot) administratorga yuboring:\n"
-                    f"👤 Admin: {admin_contact}\n\n"
-                    f"⏳ <i>To'lov tasdiqlangach, tarifingiz faollashtiriladi.</i>\n\n"
-                    f"💳 <b>Реквизиты для оплаты (Premium):</b>\n\n"
-                    f"🔢 Карта: <code>{card_number}</code>\n"
-                    f"💰 Цена: <b>{price} сум</b>\n\n"
-                    f"❗️ После оплаты отправьте чек (скриншот) администратору:\n"
-                    f"👤 Админ: {admin_contact}",
-                    parse_mode="HTML"
-                )
+                pay_text_p = {
+                    "uz": (
+                        f"💳 <b>To'lov uchun rekvizitlar (Premium):</b>\n\n"
+                        f"🔢 Karta: <code>{card_number}</code>\n"
+                        f"💰 Narxi: <b>{price} so'm</b>\n\n"
+                        f"❗️ To'lovni amalga oshirgandan so'ng, chekni (skrinshot) administratorga yuboring:\n"
+                        f"👤 Admin: {admin_contact}\n\n"
+                        f"⏳ <i>To'lov tasdiqlangach, tarifingiz faollashtiriladi.</i>"
+                    ),
+                    "ru": (
+                        f"💳 <b>Реквизиты для оплаты (Premium):</b>\n\n"
+                        f"🔢 Карта: <code>{card_number}</code>\n"
+                        f"💰 Цена: <b>{price} сум</b>\n\n"
+                        f"❗️ После оплаты отправьте чек (скриншот) администратору:\n"
+                        f"👤 Админ: {admin_contact}\n\n"
+                        f"⏳ <i>Ваш тариф будет активирован после подтверждения оплаты.</i>"
+                    ),
+                    "en": (
+                        f"💳 <b>Payment details (Premium):</b>\n\n"
+                        f"🔢 Card: <code>{card_number}</code>\n"
+                        f"💰 Price: <b>{price} UZS</b>\n\n"
+                        f"❗️ After payment, send the receipt (screenshot) to the administrator:\n"
+                        f"👤 Admin: {admin_contact}\n\n"
+                        f"⏳ <i>Plan will be activated after confirmation.</i>"
+                    )
+                }
+                await message.answer(pay_text_p.get(language, pay_text_p["en"]), parse_mode="HTML")
     except Exception as e:
         logger.error(f"WebApp data error: {e}")
         await message.answer("⚠️ Xatolik yuz berdi.")
@@ -435,7 +487,12 @@ async def nav_monitoring(message: types.Message):
         )
         return
 
-    await message.answer("✅ 24/7 Monitoring is active for your Premium account.")
+    success_msg = {
+        "uz": "✅ 24/7 Monitoring Premium hisobingiz uchun faol.",
+        "ru": "✅ 24/7 Мониторинг активен для вашего Премиум аккаунта.",
+        "en": "✅ 24/7 Monitoring is active for your Premium account."
+    }
+    await message.answer(success_msg.get(lang, success_msg["en"]))
 
 @router.message(F.text.in_({"⬅️ Ortga", "⬅️ Назад", "⬅️ Back"}))
 async def nav_back(message: types.Message, state: FSMContext):
@@ -459,7 +516,12 @@ async def nav_back(message: types.Message, state: FSMContext):
 async def process_link_check(message: types.Message, state: FSMContext):
     url = message.text
     if not url.startswith("http"):
-        await message.reply("⚠️ Noto'g'ri URL. http:// yoki https:// bilan boshlang.")
+        err_msg = {
+            "uz": "⚠️ Noto'g'ri URL. http:// yoki https:// bilan boshlang.",
+            "ru": "⚠️ Неверный URL. Начните с http:// или https://.",
+            "en": "⚠️ Invalid URL. Start with http:// or https://."
+        }
+        await message.reply(err_msg.get(lang, err_msg["en"]))
         return
 
     try:
@@ -467,7 +529,12 @@ async def process_link_check(message: types.Message, state: FSMContext):
     except:
         pass
 
-    status_msg = await message.answer(f"🔍 Tekshirilmoqda: {url} ...")
+    progress_msg = {
+        "uz": f"🔍 Tekshirilmoqda: {url} ...",
+        "ru": f"🔍 Проверяется: {url} ...",
+        "en": f"🔍 Scanning: {url} ..."
+    }
+    status_msg = await message.answer(progress_msg.get(lang, progress_msg["en"]))
     result = await scan_url_virustotal(url)
     
     user_db = await get_user(message.from_user.id)
@@ -492,7 +559,12 @@ async def process_file_check(message: types.Message, state: FSMContext):
     except:
         pass
 
-    status_msg = await message.answer(f"⬇️ Fayl yuklanmoqda: {document.file_name}...")
+    progress_msg = {
+        "uz": f"⬇️ Fayl yuklanmoqda: {document.file_name}...",
+        "ru": f"⬇️ Файл загружается: {document.file_name}...",
+        "en": f"⬇️ File downloading: {document.file_name}..."
+    }
+    status_msg = await message.answer(progress_msg.get(lang, progress_msg["en"]))
     
     user_db = await get_user(message.from_user.id)
     lang = user_db['language'] if user_db else 'uz'
@@ -514,7 +586,12 @@ async def process_file_check(message: types.Message, state: FSMContext):
         await status_msg.edit_text(error_msgs.get(lang, error_msgs["en"]))
         return
     
-    await status_msg.edit_text(f"🔍 Tahlil qilinmoqda: {document.file_name}...")
+    progress_msg2 = {
+        "uz": f"🔍 Tahlil qilinmoqda: {document.file_name}...",
+        "ru": f"🔍 Анализируется: {document.file_name}...",
+        "en": f"🔍 Analyzing: {document.file_name}..."
+    }
+    await status_msg.edit_text(progress_msg2.get(lang, progress_msg2["en"]))
     result = await scan_file_virustotal(local_path)
     
     try:
@@ -548,7 +625,12 @@ async def monitor_messages(message: types.Message):
     lang = user_db['language'] if user_db else 'uz'
 
     if message.text and message.text.startswith("http"):
-        status_msg = await message.reply("🛡 24/7 Monitoring: Tekshirilmoqda...")
+        mon_msg = {
+            "uz": "🛡 24/7 Monitoring: Tekshirilmoqda...",
+            "ru": "🛡 24/7 Мониторинг: Проверяется...",
+            "en": "🛡 24/7 Monitoring: Checking..."
+        }
+        status_msg = await message.reply(mon_msg.get(lang, mon_msg["en"]))
         result = await scan_url_virustotal(message.text)
         if "error" in result:
             await status_msg.edit_text(f"❌ {result['error']}")
@@ -559,7 +641,12 @@ async def monitor_messages(message: types.Message):
     elif message.document:
         if message.document.file_size > 20 * 1024 * 1024:
             return
-        status_msg = await message.reply("🛡 24/7 Monitoring: Fayl tekshirilmoqda...")
+        mon_msg_f = {
+            "uz": "🛡 24/7 Monitoring: Fayl tekshirilmoqda...",
+            "ru": "🛡 24/7 Мониторинг: Файл проверяется...",
+            "en": "🛡 24/7 Monitoring: File checking..."
+        }
+        status_msg = await message.reply(mon_msg_f.get(lang, mon_msg_f["en"]))
         file = await message.bot.get_file(message.document.file_id)
         local_path = f"downloads/{message.document.file_name}"
         os.makedirs("downloads", exist_ok=True)
@@ -606,7 +693,12 @@ async def business_monitoring(message: types.Message):
             await message.bot.send_message(owner_chat_id, f"⚠️ Fayl juda katta: {doc.file_name}")
         else:
             try:
-                status_msg = await message.bot.send_message(owner_chat_id, f"⏳ Tekshirilmoqda: {doc.file_name}...")
+                mon_msg_b = {
+                    "uz": f"⏳ Tekshirilmoqda: {doc.file_name}...",
+                    "ru": f"⏳ Проверяется: {doc.file_name}...",
+                    "en": f"⏳ Scanning: {doc.file_name}..."
+                }
+                status_msg = await message.bot.send_message(owner_chat_id, mon_msg_b.get(lang, mon_msg_b["en"]))
                 file_info = await message.bot.get_file(doc.file_id)
                 local_path = f"downloads/biz_{doc.file_name}"
                 os.makedirs("downloads", exist_ok=True)

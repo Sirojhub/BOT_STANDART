@@ -41,15 +41,26 @@ async def cmd_start(message: types.Message, state: FSMContext):
     if user:
         # Check if banned
         if user['is_banned']:
-            await message.answer("⛔️ Sizning hisobingiz bloklangan.\n\nAdmin bilan bog'laning: @SarhadAdmin")
+            ban_text = {
+                "uz": "⛔️ Sizning hisobingiz bloklangan.\n\nAdmin bilan bog'laning: @SarhadAdmin",
+                "ru": "⛔️ Ваш аккаунт заблокирован.\n\nСвяжитесь с админом: @SarhadAdmin",
+                "en": "⛔️ Your account is banned.\n\nContact admin: @SarhadAdmin"
+            }
+            lang = user['language'] or 'uz'
+            await message.answer(ban_text.get(lang, ban_text["en"]))
             return
 
         # Check registration complete
         if user['registration_complete']:
             await state.clear()
             lang = user['language'] or 'uz'
+            menu_text = {
+                "uz": "🏠 Asosiy menyu",
+                "ru": "🏠 Главное меню",
+                "en": "🏠 Main Menu"
+            }
             await message.answer(
-                "🏠 Asosiy menyu",
+                menu_text.get(lang, menu_text["en"]),
                 reply_markup=get_main_menu_keyboard(lang, bool(user['is_premium']))
             )
             return

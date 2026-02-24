@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SARHAD | Elite Terminal Node</title>
+    <title>SARHAD | Terminal Node</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <link
         href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Inter:wght@300;500;700&display=swap"
@@ -54,49 +54,15 @@
             }
         }
 
-        /* 3D Rotating Shield Logo */
-        .logo-section {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            margin: 20px 0 40px;
-        }
-
-        .shield-wrapper {
-            position: relative;
-            width: 100px;
-            height: 100px;
-            perspective: 1000px;
-        }
-
-        .rotating-shield {
-            width: 100%;
-            height: 100%;
-            border-radius: 50%;
-            border: 2px solid var(--neon-blue);
-            box-shadow: 0 0 30px var(--neon-blue);
-            animation: rotate3D 6s linear infinite;
-            object-fit: cover;
-        }
-
-        @keyframes rotate3D {
-            from {
-                transform: rotateY(0deg);
-            }
-
-            to {
-                transform: rotateY(360deg);
-            }
-        }
-
         h1 {
             font-family: 'Orbitron', sans-serif;
-            font-size: 1.5rem;
+            font-size: 1.8rem;
             text-transform: uppercase;
             letter-spacing: 4px;
             color: white;
             text-shadow: 0 0 15px rgba(255, 255, 255, 0.5);
-            margin-top: 15px;
+            margin: 40px 0;
+            text-align: center;
         }
 
         /* Balance Display */
@@ -230,54 +196,64 @@
             margin-left: 10px;
             border: 1px solid var(--neon-blue);
         }
+
+        .discount-tag {
+            background: rgba(0, 242, 255, 0.1);
+            color: var(--neon-blue);
+            font-size: 0.8rem;
+            padding: 2px 8px;
+            border-radius: 4px;
+            margin-left: 10px;
+        }
     </style>
 </head>
 
 <body>
     <div class="nebula"></div>
 
-    <div class="logo-section">
-        <div class="shield-wrapper">
-            <img src="logo.png" class="rotating-shield" alt="Sarhad Shield">
-        </div>
-        <h1>SARHAD NODE</h1>
-    </div>
+    <h1 id="page-title">Tariflar</h1>
 
     <div class="terminal-header">
-        <span style="color: var(--text-dim)">SYSTEM_BALANCE:</span>
+        <span id="label-balance" style="color: var(--text-dim)">SYSTEM_BALANCE:</span>
         <span id="balance-val" style="color: var(--neon-blue)">0 UZS</span>
     </div>
 
     <div class="plans-container">
+        <!-- TEST CARD -->
         <div class="card">
-            <div style="font-family: 'Orbitron'">TEST.MODE</div>
-            <div class="price">0<span>/ 24h</span></div>
+            <div id="t-title" style="font-family: 'Orbitron'">TEST.MODE</div>
+            <div class="price"><span id="t-price">0</span><span id="t-duration" style="font-size: 1rem">/ 24h</span>
+            </div>
             <ul class="features">
-                <li>Tizimga to'liq ruxsat (vaqtinchalik)</li>
-                <li>Cheksiz tahlil va diagnostika</li>
+                <li id="t-f1">Tizimga to'liq ruxsat (vaqtinchalik)</li>
+                <li id="t-f2">Cheksiz tahlil va diagnostika</li>
             </ul>
             <button id="btn-test" class="action-btn" style="background: rgba(255,255,255,0.1); color: white;"
                 onclick="buy('test')">INITIALIZE</button>
         </div>
 
+        <!-- STANDARD CARD -->
         <div class="card">
-            <div style="font-family: 'Orbitron'; color: var(--neon-blue)">STANDARD.SHIELD</div>
-            <div class="price">8,000<span style="font-size: 1rem">UZS</span></div>
+            <div id="s-title" style="font-family: 'Orbitron'; color: var(--neon-blue)">STANDARD.SHIELD</div>
+            <div class="price"><span id="s-price">8,000</span><span class="unit" style="font-size: 1rem">UZS</span><span
+                    id="s-disc"></span></div>
             <ul class="features">
-                <li>Deep Scan: Havolalarni tahlili</li>
-                <li>SafeAPK: Ilova nazorati <span class="safe-apk-badge">FAOL</span></li>
-                <li>Tahdidli obyektlarni bloklash</li>
+                <li id="s-f1">Deep Scan: Havolalarni tahlili</li>
+                <li id="s-f2">SafeAPK: Ilova nazorati <span class="safe-apk-badge" id="s-badge">FAOL</span></li>
+                <li id="s-f3">Tahdidli obyektlarni bloklash</li>
             </ul>
             <button id="btn-std" class="action-btn btn-std" onclick="buy('standard')">ACCESS_GRANTED</button>
         </div>
 
+        <!-- PREMIUM CARD -->
         <div class="card premium">
-            <div style="font-family: 'Orbitron'; color: var(--neon-gold)">PREMIUM.VANGUARD</div>
-            <div class="price">20,000<span style="font-size: 1rem">UZS</span></div>
+            <div id="p-title" style="font-family: 'Orbitron'; color: var(--neon-gold)">PREMIUM.VANGUARD</div>
+            <div class="price"><span id="p-price">20,000</span><span class="unit"
+                    style="font-size: 1rem">UZS</span><span id="p-disc"></span></div>
             <ul class="features">
-                <li>24/7 Avtomatik Monitoring</li>
-                <li>Telegram Business Integratsiyasi</li>
-                <li>Ekspert darajasidagi audit</li>
+                <li id="p-f1">24/7 Avtomatik Monitoring</li>
+                <li id="p-f2">Telegram Business Integratsiyasi</li>
+                <li id="p-f3">Ekspert darajasidagi audit</li>
             </ul>
             <button id="btn-prm" class="action-btn btn-prm" onclick="buy('premium')">UPGRADE_TO_ELITE</button>
         </div>
@@ -288,8 +264,87 @@
         tg.expand();
 
         const params = new URLSearchParams(window.location.search);
+        const lang = params.get('lang') || 'uz';
         const balance = parseInt(params.get('balance') || '0');
-        document.getElementById('balance-val').innerText = balance.toLocaleString() + " UZS";
+        const testUsed = params.get('test_used') === 'true';
+
+        const i18n = {
+            uz: {
+                title: "Tariflar",
+                bal: "TIZIM_BALANSI:",
+                unit: "UZS",
+                test: { t: "TEST.MODE", p: "0", d: "/ 24s", f: ["Tizimga to'liq ruxsat (vaqtinchalik)", "Cheksiz tahlil va diagnostika"], b: "INITIALIZE", u: "ISHLATILGAN" },
+                std: { t: "STANDARD.SHIELD", p: "8,000", f: ["Deep Scan: Havolalarni tahlili", "SafeAPK: Ilova nazorati", "Tahdidli obyektlarni bloklash"], b: "ACCESS_GRANTED", badge: "FAOL" },
+                prm: { t: "PREMIUM.VANGUARD", p: "20,000", f: ["24/7 Avtomatik Monitoring", "Telegram Business Integratsiyasi", "Ekspert darajasidagi audit"], b: "UPGRADE_TO_ELITE" }
+            },
+            ru: {
+                title: "Тарифы",
+                bal: "БАЛАНС_СИСТЕМЫ:",
+                unit: "СУМ",
+                test: { t: "TEST.MODE", p: "0", d: "/ 24ч", f: ["Полный доступ к системе (временно)", "Безлимитный анализ и диагностика"], b: "INITIALIZE", u: "ИСПОЛЬЗОВАНО" },
+                std: { t: "STANDARD.SHIELD", p: "8.000", f: ["Deep Scan: Анализ ссылок", "SafeAPK: Контроль приложений", "Блокировка угроз"], b: "ACCESS_GRANTED", badge: "АКТИВЕН" },
+                prm: { t: "PREMIUM.VANGUARD", p: "20.000", f: ["24/7 Авто-мониторинг", "Telegram Business Интеграция", "Аудит экспертного уровня"], b: "UPGRADE_TO_ELITE" }
+            },
+            en: {
+                title: "Plans",
+                bal: "SYSTEM_BALANCE:",
+                unit: "UZS",
+                test: { t: "TEST.MODE", p: "0", d: "/ 24h", f: ["Full system access (temporary)", "Unlimited analysis & diagnostics"], b: "INITIALIZE", u: "USED" },
+                std: { t: "STANDARD.SHIELD", p: "8,000", f: ["Deep Scan: Link Analysis", "SafeAPK: App Control", "Block Threat Objects"], b: "ACCESS_GRANTED", badge: "ACTIVE" },
+                prm: { t: "PREMIUM.VANGUARD", p: "20,000", f: ["24/7 Auto Monitoring", "Telegram Business Integration", "Expert-level Audit"], b: "UPGRADE_TO_ELITE" }
+            }
+        };
+
+        const t = i18n[lang] || i18n.uz;
+
+        // Render Page
+        document.getElementById('page-title').innerText = t.title;
+        document.getElementById('label-balance').innerText = t.bal;
+        document.getElementById('balance-val').innerText = balance.toLocaleString() + " " + t.unit;
+
+        // Render Units
+        document.querySelectorAll('.unit').forEach(el => el.innerText = t.unit);
+
+        // Test
+        document.getElementById('t-title').innerText = t.test.t;
+        document.getElementById('t-price').innerText = t.test.p;
+        document.getElementById('t-duration').innerText = t.test.d;
+        document.getElementById('t-f1').innerText = t.test.f[0];
+        document.getElementById('t-f2').innerText = t.test.f[1];
+        const btnTest = document.getElementById('btn-test');
+        if (testUsed) {
+            btnTest.innerText = t.test.u;
+            btnTest.classList.add('disabled');
+            btnTest.onclick = null;
+        } else {
+            btnTest.innerText = t.test.b;
+        }
+
+        // Standard
+        document.getElementById('s-title').innerText = t.std.t;
+        document.getElementById('s-price').innerText = t.std.p;
+        document.getElementById('s-f1').innerText = t.std.f[0];
+        document.getElementById('s-f2').innerHTML = `${t.std.f[1]} <span class="safe-apk-badge">${t.std.badge}</span>`;
+        document.getElementById('s-f3').innerText = t.std.f[2];
+        document.getElementById('btn-std').innerText = t.std.b;
+
+        // Premium
+        document.getElementById('p-title').innerText = t.prm.t;
+        document.getElementById('p-price').innerText = t.prm.p;
+        document.getElementById('p-f1').innerText = t.prm.f[0];
+        document.getElementById('p-f2').innerText = t.prm.f[1];
+        document.getElementById('p-f3').innerText = t.prm.f[2];
+        document.getElementById('btn-prm').innerText = t.prm.b;
+
+        // Discounts
+        if (balance > 0) {
+            if (balance <= 8000) {
+                document.getElementById('s-disc').innerHTML = `<span class="discount-tag">-${balance}</span>`;
+            }
+            if (balance <= 20000) {
+                document.getElementById('p-disc').innerHTML = `<span class="discount-tag">-${balance}</span>`;
+            }
+        }
 
         function buy(plan) {
             tg.sendData(JSON.stringify({

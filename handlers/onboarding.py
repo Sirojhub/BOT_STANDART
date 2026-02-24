@@ -27,7 +27,7 @@ async def process_language(message: types.Message, state: FSMContext):
     
     selected_text = message.text
     if selected_text not in lang_map:
-        await message.answer("Please select a valid language using the keyboard below.")
+        await message.answer("Iltimos, pastdagi klaviaturadan tilni tanlang.\nПожалуйста, выберите язык на клавиатуре ниже.\nPlease select a language using the keyboard below.")
         return
 
     lang_code = lang_map[selected_text]
@@ -109,7 +109,14 @@ async def process_webapp_data(message: types.Message, state: FSMContext):
                 await state.set_state(Registration.waiting_for_phone)
             else:
                 logger.error(f"Failed to save offer acceptance for user {message.from_user.id}")
-                await message.answer("❌ Server error while saving data. Please contact support.")
+                err_msg = {
+                    "uz": "❌ Ma'lumotlarni saqlashda server xatosi. Iltimos, qo'llab-quvvatlash xizmatiga murojaat qiling.",
+                    "ru": "❌ Ошибка сервера при сохранении данных. Пожалуйста, обратитесь в поддержку.",
+                    "en": "❌ Server error while saving data. Please contact support."
+                }
+                user_info = await get_user(message.from_user.id)
+                lang = user_info['language'] if user_info else "uz"
+                await message.answer(err_msg.get(lang, err_msg["en"]))
             return
 
         # Legacy Flow (Keep for backward compatibility if needed)
@@ -123,7 +130,14 @@ async def process_webapp_data(message: types.Message, state: FSMContext):
         # Basic Validation
         if not all([f_name, r_name, d_name, m_name, u_age]):
             logger.warning(f"Incomplete legacy data from user {message.from_user.id}: {data}")
-            await message.answer("⚠️ Incomplete data received. Please try again.")
+            err_v_msg = {
+                "uz": "⚠️ Ma'lumotlar to'liq emas. Iltimos, qaytadan urinib ko'ring.",
+                "ru": "⚠️ Данные неполные. Пожалуйста, попробуйте еще раз.",
+                "en": "⚠️ Incomplete data received. Please try again."
+            }
+            user_info = await get_user(message.from_user.id)
+            lang = user_info['language'] if user_info else "uz"
+            await message.answer(err_v_msg.get(lang, err_v_msg["en"]))
             return
 
         if u_status == "verified":
@@ -156,14 +170,35 @@ async def process_webapp_data(message: types.Message, state: FSMContext):
                 await state.set_state(Registration.waiting_for_phone)
             else:
                 logger.error(f"Failed to save legacy data for user {message.from_user.id}")
-                await message.answer("❌ Server error while saving data. Please contact support.")
+                err_msg2 = {
+                    "uz": "❌ Ma'lumotlarni saqlashda server xatosi. Iltimos, qo'llab-quvvatlash xizmatiga murojaat qiling.",
+                    "ru": "❌ Ошибка сервера при сохранении данных. Пожалуйста, обратитесь в поддержку.",
+                    "en": "❌ Server error while saving data. Please contact support."
+                }
+                user_info = await get_user(message.from_user.id)
+                lang = user_info['language'] if user_info else "uz"
+                await message.answer(err_msg2.get(lang, err_msg2["en"]))
 
     except json.JSONDecodeError:
         logger.error("Failed to decode Web App JSON data")
-        await message.answer("❌ Error processing data format.")
+        err_json = {
+            "uz": "❌ Ma'lumot formatini qayta ishlashda xatolik.",
+            "ru": "❌ Ошибка обработки формата данных.",
+            "en": "❌ Error processing data format."
+        }
+        user_info = await get_user(message.from_user.id)
+        lang = user_info['language'] if user_info else "uz"
+        await message.answer(err_json.get(lang, err_json["en"]))
     except Exception as e:
         logger.error(f"Unexpected error in webapp handler: {e}")
-        await message.answer("❌ An unexpected error occurred.")
+        err_unexp = {
+            "uz": "❌ Kutilmagan xatolik yuz berdi.",
+            "ru": "❌ Произошла непредвиденная ошибка.",
+            "en": "❌ An unexpected error occurred."
+        }
+        user_info = await get_user(message.from_user.id)
+        lang = user_info['language'] if user_info else "uz"
+        await message.answer(err_unexp.get(lang, err_unexp["en"]))
 
 @router.callback_query(F.data == "open_agreement")
 async def open_agreement_callback(callback: types.CallbackQuery, state: FSMContext):
@@ -215,8 +250,23 @@ async def process_phone(message: types.Message, state: FSMContext):
             await state.clear() 
             logger.info(f"Registration completed for user {user_id}")
         else:
-            await message.answer("❌ Failed to save phone number.")
+            err_save = {
+                "uz": "❌ Telefon raqamini saqlashda xatolik.",
+                "ru": "❌ Ошибка при сохранении номера телефона.",
+                "en": "❌ Failed to save phone number."
+            }
+            user_info = await get_user(user_id)
+            lang = user_info['language'] if user_info else "uz"
+            await message.answer(err_save.get(lang, err_save["en"]))
             
     except Exception as e:
         logger.error(f"Error in phone handler: {e}")
-        await message.answer("❌ An error occurred while processing your phone number.")
+        err_proc = {
+            "uz": "❌ Telefon raqamini qayta ishlashda xatolik yuz berdi.",
+            "ru": "❌ Произошла ошибка при обработке вашего номера телефона.",
+            "en": "❌ An error occurred while processing your phone number."
+        }
+        user_id = message.from_user.id
+        user_info = await get_user(user_id)
+        lang = user_info['language'] if user_info else "uz"
+        await message.answer(err_proc.get(lang, err_proc["en"]))
