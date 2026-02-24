@@ -1,4 +1,5 @@
 from aiogram import Router, F, types
+from aiogram.filters import StateFilter
 from aiogram.fsm.context import FSMContext
 from database import get_user, update_last_active, get_db_path, add_user
 from keyboards import get_main_menu_keyboard, get_settings_keyboard, get_language_keyboard
@@ -15,7 +16,7 @@ async def get_referral_count(user_id: int) -> int:
             row = await cursor.fetchone()
             return row[0] if row else 0
 
-@router.message(F.text.in_({"👤 Men haqimda", "👤 Обо мне", "👤 About Me"}))
+@router.message(StateFilter("*"), F.text.in_({"👤 Shaxsiy Kabinet", "👤 Личный кабинет", "👤 Personal Account", "👤 Men haqimda", "👤 Обо мне", "👤 About Me"}))
 async def cmd_profile(message: types.Message):
     user_id = message.from_user.id
     user = await get_user(user_id)
@@ -77,7 +78,7 @@ async def cmd_profile(message: types.Message):
     
     await message.answer(text.get(lang, text["en"]), parse_mode="HTML")
 
-@router.message(F.text.in_({"⚙️ Sozlamalar", "⚙️ Настройки", "⚙️ Settings"}))
+@router.message(StateFilter("*"), F.text.in_({"⚙️ Konfiguratsiya", "⚙️ Конфигурация", "⚙️ Configuration", "⚙️ Sozlamalar", "⚙️ Настройки", "⚙️ Settings"}))
 async def cmd_settings(message: types.Message):
     user_id = message.from_user.id
     user = await get_user(user_id)
@@ -98,7 +99,7 @@ async def cmd_change_lang(message: types.Message):
         reply_markup=get_language_keyboard()
     )
 
-@router.message(F.text.in_({"🇺🇿 O'zbekcha", "🇷🇺 Русский", "🇬🇧 English"}))
+@router.message(StateFilter("*"), F.text.in_({"🇺🇿 O'zbekcha", "🇷🇺 Русский", "🇬🇧 English"}))
 async def process_new_lang(message: types.Message):
     lang_map = {"🇺🇿 O'zbekcha": "uz", "🇷🇺 Русский": "ru", "🇬🇧 English": "en"}
     new_lang = lang_map.get(message.text)

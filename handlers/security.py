@@ -1,4 +1,5 @@
 from aiogram import Router, F, types
+from aiogram.filters import StateFilter
 from aiogram.enums import ChatType
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
@@ -242,7 +243,7 @@ async def scan_file_virustotal(file_path: str, language='uz', progress_callback=
 
 # ── Navigation Handlers ──────────────────────────────────────────────
 
-@router.message(F.text.in_({"🔗 Havolani tekshirish", "🔗 Проверка ссылки", "🔗 Link Check"}))
+@router.message(StateFilter("*"), F.text.in_({"🔗 Havola Auditi", "🔗 Аудит ссылки", "🔗 Link Audit", "🔗 Havolani tekshirish", "🔗 Проверка ссылки", "🔗 Link Check"}))
 async def nav_link_check(message: types.Message, state: FSMContext):
     user = await get_user(message.from_user.id)
     lang = user['language'] if user else "uz"
@@ -256,7 +257,7 @@ async def nav_link_check(message: types.Message, state: FSMContext):
     await message.answer(responses.get(lang, responses["en"]), reply_markup=get_back_keyboard(lang))
     await state.set_state(SecurityStates.waiting_for_link)
 
-@router.message(F.text.in_({"📂 Faylni tekshirish", "📂 Проверка файла", "📂 File Check"}))
+@router.message(StateFilter("*"), F.text.in_({"📂 Fayl Xavfsizligi", "📂 Безопасность файла", "📂 File Security Audit", "📂 Faylni tekshirish", "📂 Проверка файла", "📂 File Check"}))
 async def nav_file_check(message: types.Message, state: FSMContext):
     user = await get_user(message.from_user.id)
     lang = user['language'] if user else "uz"
@@ -270,8 +271,7 @@ async def nav_file_check(message: types.Message, state: FSMContext):
     await message.answer(responses.get(lang, responses["en"]), reply_markup=get_back_keyboard(lang))
     await state.set_state(SecurityStates.waiting_for_file)
 
-@router.message(F.text.in_({"🛡 Himoya ilovasini faollashtirish", "🛡 Активировать защиту", "🛡 Activate Protection App", 
-                           "🛡 Himoya (Tez kunda)", "🛡 Защита (Скоро)", "🛡 Protection (Coming Soon)"}))
+@router.message(StateFilter("*"), F.text.in_({"🛡 Himoya Ekotizimi", "🛡 Экосистема защиты", "🛡 Protection Ecosystem", "🛡 Himoya ilovasini faollashtirish", "🛡 Активировать защиту", "🛡 Activate Protection App"}))
 async def nav_protection_app(message: types.Message):
     user_id = message.from_user.id
     stats = await get_user_pricing_info(user_id)
@@ -390,9 +390,9 @@ async def process_buy_plan(message: types.Message):
                 else:
                     await set_test_used(user_id)
                     success_msg = {
-                        "uz": "✅ <b>TABRIKLAYMIZ!</b>\n\nSizning 24 soatlik sinov davringiz faollashtirildi. Barcha cheklovlar olib tashlandi.",
-                        "ru": "✅ <b>ПОЗДРАВЛЯЕМ!</b>\n\nВаш 24-часовой пробный период активирован. Все ограничения сняты.",
-                        "en": "✅ <b>CONGRATULATIONS!</b>\n\nYour 24-hour trial period has been activated. All restrictions have been removed."
+                        "uz": "✅ <b>XIZMAT FAOLLASHTIRILDI</b>\n\nSizning 24 soatlik sinov auditi davringiz faollashtirildi. Operatsion cheklovlar vaqtinchalik olib tashlandi.",
+                        "ru": "✅ <b>СЕРВИС АКТИВИРОВАН</b>\n\nВаш 24-часовой период пробного аудита активирован. Операционные ограничения временно сняты.",
+                        "en": "✅ <b>SERVICE ACTIVATED</b>\n\nYour 24-hour trial audit period has been activated. Operational restrictions have been temporarily removed."
                     }
                     await message.answer(
                         success_msg.get(language, success_msg["en"]), 
@@ -478,7 +478,7 @@ async def process_buy_plan(message: types.Message):
         logger.error(f"WebApp data error: {e}")
         await message.answer("⚠️ Xatolik yuz berdi.")
 
-@router.message(F.text.in_({"👥 Do'stlarni taklif qilish", "👥 Пригласить друзей", "👥 Invite Friends"}))
+@router.message(StateFilter("*"), F.text.in_({"👥 Hamkorlik Dasturi", "👥 Партнерская программа", "👥 Partnership Program", "👥 Do'stlarni taklif qilish", "👥 Пригласить друзей", "👥 Invite Friends"}))
 async def nav_invite(message: types.Message):
     user_id = message.from_user.id
     user = await get_user(user_id)
@@ -512,7 +512,7 @@ async def nav_invite(message: types.Message):
     
     await message.answer(responses.get(lang, responses["en"]), parse_mode="HTML")
 
-@router.message(F.text.in_({"✨ 24/7 Monitoring", "✨ 24/7 Мониторинг"}))
+@router.message(StateFilter("*"), F.text.in_({"✨ 24/7 Monitoring", "✨ 24/7 Мониторинг"}))
 async def nav_monitoring(message: types.Message):
     user_id = message.from_user.id
     stats = await get_user_pricing_info(user_id)
@@ -567,7 +567,7 @@ async def nav_monitoring(message: types.Message):
     }
     await message.answer(success_msg.get(lang, success_msg["en"]))
 
-@router.message(F.text.in_({"⬅️ Ortga", "⬅️ Назад", "⬅️ Back"}))
+@router.message(StateFilter("*"), F.text.in_({"⬅️ Ortga", "⬅️ Назад", "⬅️ Back"}))
 async def nav_back(message: types.Message, state: FSMContext):
     user = await get_user(message.from_user.id)
     lang = user['language'] if user else "uz"
