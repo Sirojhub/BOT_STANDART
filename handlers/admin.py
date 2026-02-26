@@ -76,14 +76,17 @@ async def admin_middleware(request, handler):
         logger.error(f"Admin Auth Failed: {e}")
         return web.json_response({"success": False, "error": str(e)}, status=401)
 
-# --- Command Handler ---
 @router.message(Command("admin"))
 async def cmd_admin(message: types.Message):
     if message.from_user.id not in ADMIN_IDS:
         return
     
+    # Bypass Cache & Default to /admin.html
+    base_url = ADMIN_WEBAPP_URL.rstrip('/')
+    admin_url = f"{base_url}/admin.html?v=3" if not base_url.endswith(".html") else f"{base_url}?v=3"
+
     markup = types.InlineKeyboardMarkup(inline_keyboard=[
-        [types.InlineKeyboardButton(text="🛠 Open Admin Panel", web_app=WebAppInfo(url=ADMIN_WEBAPP_URL))]
+        [types.InlineKeyboardButton(text="🛠 Open Admin Panel", web_app=WebAppInfo(url=admin_url))]
     ])
     await message.answer("🔒 Admin Panelga xush kelibsiz.", reply_markup=markup)
 

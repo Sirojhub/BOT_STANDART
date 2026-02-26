@@ -606,20 +606,39 @@ async def process_link_check(message: types.Message, state: FSMContext):
     except:
         pass
 
+    # Terminal-style keyboard
+    lock_kbd_text = {
+        "uz": "⏳ [TIZIM BAND]",
+        "ru": "⏳ [СИСТЕМА ЗАНЯТА]",
+        "en": "⏳ [SYSTEM BUSY]"
+    }
+    lock_kbd = ReplyKeyboardMarkup(
+        keyboard=[[KeyboardButton(text=lock_kbd_text.get(lang, lock_kbd_text["en"]))]],
+        resize_keyboard=True,
+        input_field_placeholder=">_ SYSTEM BUSY..."
+    )
+
     # Terminal-style initial message
     init_msg = {
-        "uz": f"<b>[SYSTEM]</b> Havolani tahlil qilish tayyorlanmoqda...\n<code>TARGET: {url}</code>",
-        "ru": f"<b>[SYSTEM]</b> Подготовка к анализу ссылки...\n<code>TARGET: {url}</code>",
-        "en": f"<b>[SYSTEM]</b> Preparing link analysis...\n<code>TARGET: {url}</code>"
+        "uz": f"<b>[SYSTEM]</b> Havolani tahlil qilish tayyorlanmoqda...\n<code>TARGET: {url}</code>\n",
+        "ru": f"<b>[SYSTEM]</b> Подготовка к анализу ссылки...\n<code>TARGET: {url}</code>\n",
+        "en": f"<b>[SYSTEM]</b> Preparing link analysis...\n<code>TARGET: {url}</code>\n"
     }
-    status_msg = await message.answer(init_msg.get(lang, init_msg["en"]), parse_mode="HTML", reply_markup=ReplyKeyboardRemove())
+    
+    log_buffer = [init_msg.get(lang, init_msg["en"])]
+    status_msg = await message.answer(log_buffer[0], parse_mode="HTML", reply_markup=lock_kbd)
     
     await state.set_state(ScanningState.processing)
 
     async def progress_update(text):
         try:
-            # We wrap the update in a code block for terminal feel
-            await status_msg.edit_text(f"<code>{text}</code>", parse_mode="HTML")
+            log_buffer.append(f"<code>{text}</code>")
+            # Keep only the last 6 lines to simulate a scrolling terminal
+            if len(log_buffer) > 6:
+                log_buffer.pop(1) # keep the first init message, remove the oldest log
+            
+            display_text = "\n".join(log_buffer)
+            await status_msg.edit_text(display_text, parse_mode="HTML")
         except:
             pass
 
@@ -653,19 +672,39 @@ async def process_file_check(message: types.Message, state: FSMContext):
         await message.delete()
     except:
         pass
+        
+    # Terminal-style keyboard
+    lock_kbd_text = {
+        "uz": "⏳ [TIZIM BAND]",
+        "ru": "⏳ [СИСТЕМА ЗАНЯТА]",
+        "en": "⏳ [SYSTEM BUSY]"
+    }
+    lock_kbd = ReplyKeyboardMarkup(
+        keyboard=[[KeyboardButton(text=lock_kbd_text.get(lang, lock_kbd_text["en"]))]],
+        resize_keyboard=True,
+        input_field_placeholder=">_ SYSTEM BUSY..."
+    )
 
     init_msg = {
-        "uz": f"<b>[SYSTEM]</b> Fayl qabul qilindi: <code>{document.file_name}</code>\nInisializatsiya...",
-        "ru": f"<b>[SYSTEM]</b> Файл получен: <code>{document.file_name}</code>\nИнициализация...",
-        "en": f"<b>[SYSTEM]</b> File received: <code>{document.file_name}</code>\nInitializing..."
+        "uz": f"<b>[SYSTEM]</b> Fayl qabul qilindi: <code>{document.file_name}</code>\nInisializatsiya...\n",
+        "ru": f"<b>[SYSTEM]</b> Файл получен: <code>{document.file_name}</code>\nИнициализация...\n",
+        "en": f"<b>[SYSTEM]</b> File received: <code>{document.file_name}</code>\nInitializing...\n"
     }
-    status_msg = await message.answer(init_msg.get(lang, init_msg["en"]), parse_mode="HTML", reply_markup=ReplyKeyboardRemove())
+    
+    log_buffer = [init_msg.get(lang, init_msg["en"])]
+    status_msg = await message.answer(log_buffer[0], parse_mode="HTML", reply_markup=lock_kbd)
     
     await state.set_state(ScanningState.processing)
 
     async def progress_update(text):
         try:
-            await status_msg.edit_text(f"<code>{text}</code>", parse_mode="HTML")
+            log_buffer.append(f"<code>{text}</code>")
+            # Keep only the last 6 lines to simulate a scrolling terminal
+            if len(log_buffer) > 6:
+                log_buffer.pop(1) # keep the first init message, remove the oldest log
+            
+            display_text = "\n".join(log_buffer)
+            await status_msg.edit_text(display_text, parse_mode="HTML")
         except:
             pass
 
@@ -710,12 +749,27 @@ async def block_while_scanning(message: types.Message):
     user_db = await get_user(message.from_user.id)
     lang = user_db['language'] if user_db else 'uz'
     err_msg = {
-        "uz": "❌ [XATO]: Tizim band. Skanerlash jarayoni tugashini kuting.",
-        "ru": "❌ [ОШИБКА]: Система занята. Подождите завершения сканирования.",
-        "en": "❌ [ERROR]: System busy. Please wait for the scan to complete."
+        "uz": "❌ <b>[XATO]</b>: Tarkib bloklandi.\n>_ Skanerlash jarayoni tugashini kuting...",
+        "ru": "❌ <b>[ОШИБКА]</b>: Доступ заблокирован.\n>_ Дождитесь завершения сканирования...",
+        "en": "❌ <b>[ERROR]</b>: Access blocked.\n>_ Please wait for the scan to complete..."
     }
+    lock_kbd_text = {
+        "uz": "⏳ [TIZIM BAND]",
+        "ru": "⏳ [СИСТЕМА ЗАНЯТА]",
+        "en": "⏳ [SYSTEM BUSY]"
+    }
+    lock_kbd = ReplyKeyboardMarkup(
+        keyboard=[[KeyboardButton(text=lock_kbd_text.get(lang, lock_kbd_text["en"]))]],
+        resize_keyboard=True,
+        input_field_placeholder=">_ SYSTEM BUSY..."
+    )
     await message.delete()  # Remove the user's message
-    await message.answer(err_msg.get(lang, err_msg["en"]))
+    sent = await message.answer(err_msg.get(lang, err_msg["en"]), parse_mode="HTML", reply_markup=lock_kbd)
+    await asyncio.sleep(3)
+    try:
+        await sent.delete()
+    except:
+        pass
 
 # ── 24/7 Monitoring (Private Chat) ───────────────────────────────────
 
