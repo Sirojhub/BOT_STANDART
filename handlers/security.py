@@ -153,9 +153,9 @@ async def scan_url_virustotal(url: str, language='uz', progress_callback=None):
                 return {"stats": result['stats'], "link": vt_link}
             else:
                 to_msg = {
-                    "uz": "Tahlil vaqti tugadi (5 min). Natija hali tayyor emas.",
-                    "ru": "Время анализа истёкло (5 мин). Результат еще не готов.",
-                    "en": "Analysis timed out (5 min). Result is not ready yet."
+                    "uz": "⏳ <b>[TIZIM KUTISH VAQTI TUGADI]</b>\nManba tahlil qilish odatdagidan ko'proq vaqt olmoqda.\n\n⚡️ <i>Jarayon orqa fonda davom etyapdi. Bir necha daqiqadan so'ng aynan shu havolani qayta yuborsangiz, natijani tayyor holatda olasiz!</i>",
+                    "ru": "⏳ <b>[ВРЕМЯ ОЖИДАНИЯ ИСТЕКЛО]</b>\nАнализ источника занимает больше времени, чем обычно.\n\n⚡️ <i>Процесс продолжается в фоновом режиме. Если вы отправите эту же ссылку снова через несколько минут, вы получите готовый результат!</i>",
+                    "en": "⏳ <b>[SYSTEM TIMEOUT]</b>\nSource analysis is taking longer than usual.\n\n⚡️ <i>The process continues in the background. If you resend the exact same link in a few minutes, you will get the completed result!</i>"
                 }
                 return {"error": to_msg.get(language, to_msg["en"])}
                 
@@ -233,9 +233,9 @@ async def scan_file_virustotal(file_path: str, language='uz', progress_callback=
                 return {"stats": result['stats'], "link": vt_link}
             else:
                 to_msg = {
-                    "uz": "Tahlil vaqti tugadi (5 min). Fayl juda katta bo'lishi mumkin.",
-                    "ru": "Время анализа истёкло (5 мин). Файл может быть слишком большим.",
-                    "en": "Analysis timed out (5 min). File might be too large."
+                    "uz": "⏳ <b>[TIZIM KUTISH VAQTI TUGADI]</b>\nFayl hajmi katta bo'lganligi sababli tahlil qilish odatdagidan ko'proq vaqt olmoqda.\n\n⚡️ <i>Jarayon orqa fonda davom etyapdi. Bir necha daqiqadan so'ng aynan shu faylni botga qayta yuborsangiz, natijani tayyor holatda olasiz!</i>",
+                    "ru": "⏳ <b>[ВРЕМЯ ОЖИДАНИЯ ИСТЕКЛО]</b>\nАнализ файла занимает больше времени из-за его большого размера.\n\n⚡️ <i>Процесс продолжается в фоновом режиме. Если вы отправите этот же файл снова через несколько минут, вы получите готовый результат!</i>",
+                    "en": "⏳ <b>[SYSTEM TIMEOUT]</b>\nFile analysis is taking longer than usual due to its large size.\n\n⚡️ <i>The process continues in the background. If you resend the exact same file in a few minutes, you will get the completed result!</i>"
                 }
                 return {"error": to_msg.get(language, to_msg["en"])}
         except Exception as e:
