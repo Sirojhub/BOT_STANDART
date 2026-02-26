@@ -8,3 +8,6 @@ class Registration(StatesGroup):
     waiting_for_webapp = State()
     waiting_for_phone = State()
     main_menu = State()  # Added for post-registration state
+
+class ScanningState(StatesGroup):
+    processing = State()

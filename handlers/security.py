@@ -3,6 +3,7 @@ from aiogram.filters import StateFilter
 from aiogram.enums import ChatType
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
+from states import ScanningState
 import aiohttp
 import hashlib
 import os
@@ -13,7 +14,7 @@ import asyncio
 import re
 import logging
 import json
-from aiogram.types import WebAppInfo, InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardMarkup, KeyboardButton
+from aiogram.types import WebAppInfo, InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardMarkup, KeyboardButton, ReplyKeyboardRemove
 from database import (
     get_user_pricing_info, 
     update_referral_balance, 
@@ -611,7 +612,9 @@ async def process_link_check(message: types.Message, state: FSMContext):
         "ru": f"<b>[SYSTEM]</b> Подготовка к анализу ссылки...\n<code>TARGET: {url}</code>",
         "en": f"<b>[SYSTEM]</b> Preparing link analysis...\n<code>TARGET: {url}</code>"
     }
-    status_msg = await message.answer(init_msg.get(lang, init_msg["en"]), parse_mode="HTML")
+    status_msg = await message.answer(init_msg.get(lang, init_msg["en"]), parse_mode="HTML", reply_markup=ReplyKeyboardRemove())
+    
+    await state.set_state(ScanningState.processing)
 
     async def progress_update(text):
         try:
@@ -627,6 +630,9 @@ async def process_link_check(message: types.Message, state: FSMContext):
     else:
         text = format_scan_report(result["stats"], result["link"], lang, AD_PLACEHOLDER_TEXT)
         await status_msg.edit_text(text, parse_mode="HTML")
+        
+    await message.answer("Menyu:", reply_markup=get_main_menu_keyboard(lang, user_db['is_premium'] if user_db else False))
+    await state.clear()
 
 @router.message(SecurityStates.waiting_for_file, F.document)
 async def process_file_check(message: types.Message, state: FSMContext):
@@ -653,7 +659,9 @@ async def process_file_check(message: types.Message, state: FSMContext):
         "ru": f"<b>[SYSTEM]</b> Файл получен: <code>{document.file_name}</code>\nИнициализация...",
         "en": f"<b>[SYSTEM]</b> File received: <code>{document.file_name}</code>\nInitializing..."
     }
-    status_msg = await message.answer(init_msg.get(lang, init_msg["en"]), parse_mode="HTML")
+    status_msg = await message.answer(init_msg.get(lang, init_msg["en"]), parse_mode="HTML", reply_markup=ReplyKeyboardRemove())
+    
+    await state.set_state(ScanningState.processing)
 
     async def progress_update(text):
         try:
@@ -677,6 +685,8 @@ async def process_file_check(message: types.Message, state: FSMContext):
             "en": "❌ Download error."
         }
         await status_msg.edit_text(error_msgs.get(lang, error_msgs["en"]))
+        await message.answer("Menyu:", reply_markup=get_main_menu_keyboard(lang, user_db['is_premium'] if user_db else False))
+        await state.clear()
         return
     
     result = await scan_file_virustotal(local_path, lang, progress_update)
@@ -691,7 +701,21 @@ async def process_file_check(message: types.Message, state: FSMContext):
     else:
         text = format_scan_report(result["stats"], result["link"], lang, AD_PLACEHOLDER_TEXT)
         await status_msg.edit_text(text, parse_mode="HTML")
+        
+    await message.answer("Menyu:", reply_markup=get_main_menu_keyboard(lang, user_db['is_premium'] if user_db else False))
+    await state.clear()
 
+@router.message(StateFilter(ScanningState.processing))
+async def block_while_scanning(message: types.Message):
+    user_db = await get_user(message.from_user.id)
+    lang = user_db['language'] if user_db else 'uz'
+    err_msg = {
+        "uz": "❌ [XATO]: Tizim band. Skanerlash jarayoni tugashini kuting.",
+        "ru": "❌ [ОШИБКА]: Система занята. Подождите завершения сканирования.",
+        "en": "❌ [ERROR]: System busy. Please wait for the scan to complete."
+    }
+    await message.delete()  # Remove the user's message
+    await message.answer(err_msg.get(lang, err_msg["en"]))
 
 # ── 24/7 Monitoring (Private Chat) ───────────────────────────────────
 
