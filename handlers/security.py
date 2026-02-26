@@ -613,8 +613,11 @@ async def process_link_check(message: types.Message, state: FSMContext):
         "en": f"<b>[SYSTEM]</b> Preparing link analysis...\n<code>TARGET: {url}</code>\n"
     }
     
+    dummy = await message.answer("🔄", reply_markup=ReplyKeyboardRemove())
+    await dummy.delete()
+    
     log_buffer = [init_msg.get(lang, init_msg["en"])]
-    status_msg = await message.answer(log_buffer[0], parse_mode="HTML", reply_markup=ReplyKeyboardRemove())
+    status_msg = await message.answer(log_buffer[0], parse_mode="HTML")
 
     async def progress_update(text):
         try:
@@ -626,8 +629,8 @@ async def process_link_check(message: types.Message, state: FSMContext):
             
             display_text = "\n".join(log_buffer)
             await status_msg.edit_text(display_text, parse_mode="HTML")
-        except:
-            pass
+        except Exception as e:
+            logger.error(f"UI Update error: {e}")
 
     # Artificial bootup sequence
     boot_seq = [
@@ -675,8 +678,11 @@ async def process_file_check(message: types.Message, state: FSMContext):
         "en": f"<b>[SYSTEM]</b> File received: <code>{document.file_name}</code>\nInitializing...\n"
     }
     
+    dummy = await message.answer("🔄", reply_markup=ReplyKeyboardRemove())
+    await dummy.delete()
+    
     log_buffer = [init_msg.get(lang, init_msg["en"])]
-    status_msg = await message.answer(log_buffer[0], parse_mode="HTML", reply_markup=ReplyKeyboardRemove())
+    status_msg = await message.answer(log_buffer[0], parse_mode="HTML")
 
     async def progress_update(text):
         try:
@@ -688,8 +694,8 @@ async def process_file_check(message: types.Message, state: FSMContext):
             
             display_text = "\n".join(log_buffer)
             await status_msg.edit_text(display_text, parse_mode="HTML")
-        except:
-            pass
+        except Exception as e:
+            logger.error(f"UI Update error: {e}")
 
     # Artificial boot sequence
     boot_seq = [
