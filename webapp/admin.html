@@ -184,8 +184,8 @@
             if (tabId === 'broadcast') loadAdSettings();
         }
 
-        // ===== API Server URL (Render.com) =====
-        const API_BASE_URL = 'https://bot-standart.onrender.com';
+        // ===== API Server URL (Relative for Render/Local) =====
+        const API_BASE_URL = '';
 
         async function apiCall(endpoint, method = 'GET', body = null) {
             const url = API_BASE_URL + endpoint;
@@ -338,7 +338,7 @@
         }
 
         async function togglePremium(userId) {
-            const res = await apiCall('/api/admin/user/premium', 'POST', { user_id: userId });
+            const res = await apiCall('/api/admin/toggle', 'POST', { user_id: userId, action: 'premium' });
             if (res && res.success) {
                 showToast(`Status updated: ${res.new_status}`, 'success');
                 loadUsers();
@@ -347,7 +347,7 @@
 
         async function toggleBan(userId) {
             if (!confirm("Haqiqatan ham bu foydalanuvchini bloklamoqchimisiz?")) return;
-            const res = await apiCall('/api/admin/user/ban', 'POST', { user_id: userId });
+            const res = await apiCall('/api/admin/toggle', 'POST', { user_id: userId, action: 'ban' });
             if (res && res.success) {
                 showToast(`User banned: ${res.new_status}`, 'success');
                 loadUsers();
