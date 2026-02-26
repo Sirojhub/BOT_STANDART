@@ -82,10 +82,13 @@ def format_scan_report(stats: dict, link: str, language: str = 'uz', ad_text: st
     
     t = status_map.get(language, status_map["en"])
     
-    # Determine Status
-    if malicious > 0: status_header = t["mal"]
-    elif suspicious > 0: status_header = t["susp"]
-    else: status_header = t["safe"]
+    # Determine Status based on Thresholds
+    if malicious >= 3:
+        status_header = t["mal"]
+    elif malicious >= 1 or suspicious >= 2:
+        status_header = t["susp"]
+    else:
+        status_header = t["safe"]
 
     return (
         f"<b>{t['title']}</b>\n\n"
