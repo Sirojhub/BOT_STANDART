@@ -606,18 +606,6 @@ async def process_link_check(message: types.Message, state: FSMContext):
     except:
         pass
 
-    # Terminal-style keyboard
-    lock_kbd_text = {
-        "uz": "⏳ [TIZIM BAND]",
-        "ru": "⏳ [СИСТЕМА ЗАНЯТА]",
-        "en": "⏳ [SYSTEM BUSY]"
-    }
-    lock_kbd = ReplyKeyboardMarkup(
-        keyboard=[[KeyboardButton(text=lock_kbd_text.get(lang, lock_kbd_text["en"]))]],
-        resize_keyboard=True,
-        input_field_placeholder=">_ SYSTEM BUSY..."
-    )
-
     # Terminal-style initial message
     init_msg = {
         "uz": f"<b>[SYSTEM]</b> Havolani tahlil qilish tayyorlanmoqda...\n<code>TARGET: {url}</code>\n",
@@ -626,12 +614,11 @@ async def process_link_check(message: types.Message, state: FSMContext):
     }
     
     log_buffer = [init_msg.get(lang, init_msg["en"])]
-    status_msg = await message.answer(log_buffer[0], parse_mode="HTML", reply_markup=lock_kbd)
-    
-    await state.set_state(ScanningState.processing)
+    status_msg = await message.answer(log_buffer[0], parse_mode="HTML", reply_markup=ReplyKeyboardRemove())
 
     async def progress_update(text):
         try:
+            await asyncio.sleep(0.8) # Artificial delay
             log_buffer.append(f"<code>{text}</code>")
             # Keep only the last 6 lines to simulate a scrolling terminal
             if len(log_buffer) > 6:
@@ -641,6 +628,15 @@ async def process_link_check(message: types.Message, state: FSMContext):
             await status_msg.edit_text(display_text, parse_mode="HTML")
         except:
             pass
+
+    # Artificial bootup sequence
+    boot_seq = [
+        "[SYS] Integrity Module Loaded...",
+        "[NET] Establishing Secure Connection...",
+        "[VORTEX] Handshake with Global Nodes..."
+    ]
+    for step in boot_seq:
+        await progress_update(step)
 
     result = await scan_url_virustotal(url, lang, progress_update)
     
@@ -672,18 +668,6 @@ async def process_file_check(message: types.Message, state: FSMContext):
         await message.delete()
     except:
         pass
-        
-    # Terminal-style keyboard
-    lock_kbd_text = {
-        "uz": "⏳ [TIZIM BAND]",
-        "ru": "⏳ [СИСТЕМА ЗАНЯТА]",
-        "en": "⏳ [SYSTEM BUSY]"
-    }
-    lock_kbd = ReplyKeyboardMarkup(
-        keyboard=[[KeyboardButton(text=lock_kbd_text.get(lang, lock_kbd_text["en"]))]],
-        resize_keyboard=True,
-        input_field_placeholder=">_ SYSTEM BUSY..."
-    )
 
     init_msg = {
         "uz": f"<b>[SYSTEM]</b> Fayl qabul qilindi: <code>{document.file_name}</code>\nInisializatsiya...\n",
@@ -692,12 +676,11 @@ async def process_file_check(message: types.Message, state: FSMContext):
     }
     
     log_buffer = [init_msg.get(lang, init_msg["en"])]
-    status_msg = await message.answer(log_buffer[0], parse_mode="HTML", reply_markup=lock_kbd)
-    
-    await state.set_state(ScanningState.processing)
+    status_msg = await message.answer(log_buffer[0], parse_mode="HTML", reply_markup=ReplyKeyboardRemove())
 
     async def progress_update(text):
         try:
+            await asyncio.sleep(0.8) # Artificial delay
             log_buffer.append(f"<code>{text}</code>")
             # Keep only the last 6 lines to simulate a scrolling terminal
             if len(log_buffer) > 6:
@@ -707,6 +690,14 @@ async def process_file_check(message: types.Message, state: FSMContext):
             await status_msg.edit_text(display_text, parse_mode="HTML")
         except:
             pass
+
+    # Artificial boot sequence
+    boot_seq = [
+        "[SYS] Allocating Secure Memory Buffer...",
+        "[NET] Establishing Connection to Integrity Engine...",
+    ]
+    for step in boot_seq:
+        await progress_update(step)
 
     # Download
     try:
@@ -725,7 +716,6 @@ async def process_file_check(message: types.Message, state: FSMContext):
         }
         await status_msg.edit_text(error_msgs.get(lang, error_msgs["en"]))
         await message.answer("Menyu:", reply_markup=get_main_menu_keyboard(lang, user_db['is_premium'] if user_db else False))
-        await state.clear()
         return
     
     result = await scan_file_virustotal(local_path, lang, progress_update)
@@ -742,34 +732,6 @@ async def process_file_check(message: types.Message, state: FSMContext):
         await status_msg.edit_text(text, parse_mode="HTML")
         
     await message.answer("Menyu:", reply_markup=get_main_menu_keyboard(lang, user_db['is_premium'] if user_db else False))
-    await state.clear()
-
-@router.message(StateFilter(ScanningState.processing))
-async def block_while_scanning(message: types.Message):
-    user_db = await get_user(message.from_user.id)
-    lang = user_db['language'] if user_db else 'uz'
-    err_msg = {
-        "uz": "❌ <b>[XATO]</b>: Tarkib bloklandi.\n>_ Skanerlash jarayoni tugashini kuting...",
-        "ru": "❌ <b>[ОШИБКА]</b>: Доступ заблокирован.\n>_ Дождитесь завершения сканирования...",
-        "en": "❌ <b>[ERROR]</b>: Access blocked.\n>_ Please wait for the scan to complete..."
-    }
-    lock_kbd_text = {
-        "uz": "⏳ [TIZIM BAND]",
-        "ru": "⏳ [СИСТЕМА ЗАНЯТА]",
-        "en": "⏳ [SYSTEM BUSY]"
-    }
-    lock_kbd = ReplyKeyboardMarkup(
-        keyboard=[[KeyboardButton(text=lock_kbd_text.get(lang, lock_kbd_text["en"]))]],
-        resize_keyboard=True,
-        input_field_placeholder=">_ SYSTEM BUSY..."
-    )
-    await message.delete()  # Remove the user's message
-    sent = await message.answer(err_msg.get(lang, err_msg["en"]), parse_mode="HTML", reply_markup=lock_kbd)
-    await asyncio.sleep(3)
-    try:
-        await sent.delete()
-    except:
-        pass
 
 # ── 24/7 Monitoring (Private Chat) ───────────────────────────────────
 
