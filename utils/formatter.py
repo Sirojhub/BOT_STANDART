@@ -24,6 +24,8 @@ def normalize_url(text: str) -> str | None:
         return f"http://{text}"
         
     return None
+
+def format_scan_report(stats: dict, link: str, language: str = 'uz', ad_text: str = AD_PLACEHOLDER_TEXT) -> str:
     """
     Formats the VirusTotal scan results into a professional multi-language template.
     """
