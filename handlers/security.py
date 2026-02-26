@@ -588,15 +588,16 @@ async def nav_back(message: types.Message, state: FSMContext):
 
 @router.message(SecurityStates.waiting_for_link, F.text)
 async def process_link_check(message: types.Message, state: FSMContext):
-    url = message.text
+    from utils.formatter import normalize_url
+    url = normalize_url(message.text)
     user_db = await get_user(message.from_user.id)
     lang = user_db['language'] if user_db else 'uz'
 
-    if not url.startswith("http"):
+    if not url:
         err_msg = {
-            "uz": "⚠️ Noto'g'ri URL. http:// yoki https:// bilan boshlang.",
-            "ru": "⚠️ Неверный URL. Начните с http:// или https://.",
-            "en": "⚠️ Invalid URL. Start with http:// or https://."
+            "uz": "⚠️ Noto'g'ri xabar formati. Iltimos tekshirish uchun havola (link) yoki username (@bilan) yuboring.",
+            "ru": "⚠️ Неверный формат сообщения. Пожалуйста, отправьте ссылку или имя пользователя (с @) для проверки.",
+            "en": "⚠️ Invalid message format. Please send a link or username (with @) to check."
         }
         await message.reply(err_msg.get(lang, err_msg["en"]))
         return

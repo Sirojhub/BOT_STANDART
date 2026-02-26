@@ -1,6 +1,29 @@
+import re
 from config import AD_PLACEHOLDER_TEXT
 
-def format_scan_report(stats: dict, link: str, language: str = 'uz', ad_text: str = AD_PLACEHOLDER_TEXT) -> str:
+def normalize_url(text: str) -> str | None:
+    """
+    Normalizes a given string into a valid URL for VirusTotal scanning.
+    - Handles Telegram @usernames
+    - Prepends http:// to raw domains/IPs
+    - Returns None if it's completely invalid text
+    """
+    text = text.strip()
+    
+    # Handle Telegram username
+    if text.startswith('@'):
+        return f"https://t.me/{text[1:]}"
+        
+    # Valid existing links
+    if re.match(r'^https?://', text, re.IGNORECASE):
+        return text
+        
+    # Raw domains (e.g. google.com) or IP addresses (e.g. 192.168.1.1)
+    if re.search(r'\.[a-z]{2,}|\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}', text, re.IGNORECASE):
+        # We assume http for VT to scan it if no protocol was provided
+        return f"http://{text}"
+        
+    return None
     """
     Formats the VirusTotal scan results into a professional multi-language template.
     """
