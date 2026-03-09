@@ -8,7 +8,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 # Ensure data directory exists
 os.makedirs("data", exist_ok=True)
-DB_NAME = "data/bot.db"
+DB_NAME = os.getenv("DB_NAME", "bot_standart.db")
 
 def get_db_path():
     return DB_NAME
